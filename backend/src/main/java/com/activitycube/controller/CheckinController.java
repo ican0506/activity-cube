@@ -33,6 +33,11 @@ public class CheckinController {
         return Result.success(checkinService.absences(id, AuthUtil.requireUser()));
     }
 
+    @GetMapping("/api/activities/{id}/absentees")
+    public Result<List<Registration>> absentees(@PathVariable Long id) {
+        return Result.success(checkinService.absences(id, AuthUtil.requireUser()));
+    }
+
     @GetMapping("/api/my/checkins")
     public Result<List<Checkin>> myCheckins() {
         return Result.success(checkinService.myCheckins(AuthUtil.requireUser()));

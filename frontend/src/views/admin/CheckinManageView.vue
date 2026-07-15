@@ -48,12 +48,16 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
+import { getActivity } from '../../api/activity'
 import { listAbsences, listCheckins } from '../../api/checkin'
-import { downloadExport } from '../../api/export'
+import { listRegistrations } from '../../api/registration'
+import { checkedRegistrations, exportRosterExcel } from '../../utils/excelExport'
 import { buildActivityQrLinks } from '../../utils/qrLinks'
 
 const route = useRoute()
 const qr = ref(null)
+const activity = ref(null)
+const registrations = ref([])
 const checkins = ref([])
 const absences = ref([])
 const checkinUrl = buildActivityQrLinks(location.origin, route.params.id).checkinUrl
@@ -63,8 +67,16 @@ const rate = computed(() => {
 })
 
 async function load() {
-  checkins.value = await listCheckins(route.params.id)
-  absences.value = await listAbsences(route.params.id)
+  const [detail, registrationRows, checkinRows, absenceRows] = await Promise.all([
+    getActivity(route.params.id),
+    listRegistrations(route.params.id),
+    listCheckins(route.params.id),
+    listAbsences(route.params.id)
+  ])
+  activity.value = detail.activity
+  registrations.value = registrationRows
+  checkins.value = checkinRows
+  absences.value = absenceRows
   await nextTick()
   QRCode.toCanvas(qr.value, checkinUrl, { width: 180 })
 }
@@ -75,7 +87,13 @@ async function copyLink() {
 }
 
 function download() {
-  downloadExport(route.params.id, 'checkins')
+  exportRosterExcel({
+    activityName: activity.value?.title,
+    suffix: '签到名单',
+    registrations: checkedRegistrations(registrations.value, checkins.value),
+    checkins: checkins.value
+  })
+  ElMessage.success('签到名单已导出')
 }
 
 onMounted(load)

@@ -19,6 +19,7 @@ const routes = [
   { path: '/admin/activities/:id/qrcodes', component: () => import('../views/admin/QrCodeManageView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/registrations', component: () => import('../views/admin/RegistrationListView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/checkins', component: () => import('../views/admin/CheckinManageView.vue'), meta: { requiresAuth: true, requiresManager: true } },
+  { path: '/admin/activities/:id/lottery', component: () => import('../views/admin/LotteryView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/tools', component: () => import('../views/admin/ToolsView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/feedbacks', component: () => import('../views/admin/FeedbackStatsView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/stats', component: () => import('../views/admin/ActivityStatsView.vue'), meta: { requiresAuth: true, requiresManager: true } }

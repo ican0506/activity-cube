@@ -5,6 +5,7 @@
         <h1>活动数据统计</h1>
         <p>追踪报名人数、签到人数、未签到人数和签到率，辅助活动复盘。</p>
       </div>
+      <el-button class="hero-button" @click="downloadAbsentees">导出未签到名单</el-button>
     </div>
 
     <div class="metric-row">
@@ -30,11 +31,16 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
+import { getActivity } from '../../api/activity'
+import { listAbsentees } from '../../api/checkin'
 import { getActivityStats } from '../../api/stat'
+import { exportRosterExcel } from '../../utils/excelExport'
 
 const route = useRoute()
 const stats = ref({})
+const activity = ref(null)
 const chart = ref(null)
 const loading = ref(false)
 let chartInstance = null
@@ -43,7 +49,12 @@ const campusStats = computed(() => stats.value.campusStats || [])
 async function load() {
   loading.value = true
   try {
-    stats.value = await getActivityStats(route.params.id)
+    const [detail, statData] = await Promise.all([
+      getActivity(route.params.id),
+      getActivityStats(route.params.id)
+    ])
+    activity.value = detail.activity
+    stats.value = statData
     await nextTick()
     renderChart()
   } finally {
@@ -92,6 +103,16 @@ function renderChart() {
 
 function resizeChart() {
   if (chartInstance) chartInstance.resize()
+}
+
+async function downloadAbsentees() {
+  const absentees = await listAbsentees(route.params.id)
+  exportRosterExcel({
+    activityName: activity.value?.title,
+    suffix: '未签到名单',
+    registrations: absentees
+  })
+  ElMessage.success('未签到名单已导出')
 }
 
 onMounted(load)

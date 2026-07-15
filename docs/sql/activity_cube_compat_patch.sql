@@ -1,0 +1,26 @@
+-- information 数据库兼容补丁
+-- 用途：把旧表字段 created_at / updated_at 调整为当前后端代码使用的 create_time / update_time。
+-- 执行前提：information 库中已经存在 user、activity、registration、checkin、feedback 表。
+-- 注意：本脚本只调整字段名和补齐时间字段，不删除已有数据。
+
+USE `activity_cube`;
+
+ALTER TABLE `user`
+  CHANGE COLUMN `created_at` `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  CHANGE COLUMN `updated_at` `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';
+
+ALTER TABLE `activity`
+  CHANGE COLUMN `created_at` `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  CHANGE COLUMN `updated_at` `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';
+
+ALTER TABLE `registration`
+  CHANGE COLUMN `created_at` `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  ADD COLUMN `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';
+
+ALTER TABLE `feedback`
+  CHANGE COLUMN `created_at` `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  ADD COLUMN `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';
+
+ALTER TABLE `checkin`
+  ADD COLUMN `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  ADD COLUMN `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';

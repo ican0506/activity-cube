@@ -12,6 +12,10 @@ export function listAbsences(id) {
   return request.get(`/activities/${id}/absences`)
 }
 
+export function listAbsentees(id) {
+  return request.get(`/activities/${id}/absentees`)
+}
+
 export function myCheckins() {
   return request.get('/my/checkins')
 }
