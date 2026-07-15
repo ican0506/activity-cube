@@ -50,12 +50,13 @@ import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
 import { listAbsences, listCheckins } from '../../api/checkin'
 import { downloadExport } from '../../api/export'
+import { buildActivityQrLinks } from '../../utils/qrLinks'
 
 const route = useRoute()
 const qr = ref(null)
 const checkins = ref([])
 const absences = ref([])
-const checkinUrl = `${location.origin}/activities/${route.params.id}/checkin`
+const checkinUrl = buildActivityQrLinks(location.origin, route.params.id).checkinUrl
 const rate = computed(() => {
   const total = checkins.value.length + absences.value.length
   return total ? Math.round((checkins.value.length * 10000) / total) / 100 : 0

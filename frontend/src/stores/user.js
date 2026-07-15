@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { login as loginApi, me } from '../api/auth'
+import { login as loginApi, me, register as registerApi } from '../api/auth'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('activity_cube_token') || '')
@@ -24,6 +24,12 @@ export const useUserStore = defineStore('user', () => {
     return data
   }
 
+  async function register(payload) {
+    const data = await registerApi(payload)
+    persist(data.token, data.user)
+    return data
+  }
+
   async function refresh() {
     if (!token.value) return null
     const user = await me()
@@ -39,5 +45,5 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('activity_cube_user')
   }
 
-  return { token, userInfo, isLogin, role, campus, canManage, login, refresh, logout }
+  return { token, userInfo, isLogin, role, campus, canManage, login, register, refresh, logout }
 })

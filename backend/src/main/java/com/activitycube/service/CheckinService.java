@@ -22,7 +22,8 @@ public class CheckinService {
     private final ActivityService activityService;
 
     public Checkin checkin(Long activityId, User user) {
-        activityService.requireActivity(activityId);
+        var activity = activityService.requireActivity(activityId);
+        validateCheckinTime(activity.getStartTime(), activity.getEndTime());
         Registration registration = registrationService.requireRegistration(activityId, user.getId());
         if (checkinMapper.selectCount(new LambdaQueryWrapper<Checkin>()
                 .eq(Checkin::getActivityId, activityId)
@@ -37,6 +38,13 @@ public class CheckinService {
         checkin.setCheckinTime(LocalDateTime.now());
         checkinMapper.insert(checkin);
         return checkin;
+    }
+
+    private void validateCheckinTime(LocalDateTime startTime, LocalDateTime endTime) {
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(startTime) || now.isAfter(endTime)) {
+            throw new BusinessException("当前不在签到时间内");
+        }
     }
 
     public List<Checkin> listByActivity(Long activityId, User user) {

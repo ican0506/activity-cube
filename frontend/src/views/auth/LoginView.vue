@@ -26,6 +26,11 @@
         <el-button @click="fill('organizer001')">负责人账号</el-button>
         <el-button @click="fill('admin')">管理员账号</el-button>
       </div>
+
+      <p class="auth-switch">
+        还没有账号？
+        <RouterLink to="/register">注册学生账号</RouterLink>
+      </p>
     </div>
   </section>
 </template>

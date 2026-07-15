@@ -1,21 +1,28 @@
 <template>
   <section>
-    <div class="page-head">
+    <div class="hero">
       <div>
-        <h1 class="page-title">活动魔方</h1>
-        <p class="page-subtitle">校园活动创建、报名二维码、签到二维码、名单统计和导出的 MVP 工具平台。</p>
+        <h1>活动魔方</h1>
+        <p>面向校园活动组织的一站式轻工具，覆盖活动发布、报名收集、二维码签到和数据复盘。</p>
+        <div class="hero-actions">
+          <RouterLink to="/activities">
+            <el-button class="hero-button">进入活动大厅</el-button>
+          </RouterLink>
+        </div>
       </div>
-      <RouterLink to="/activities">
-        <el-button type="primary">进入活动大厅</el-button>
-      </RouterLink>
+      <div class="hero-card">
+        <span>校园微服务</span>
+        <strong>轻量闭环</strong>
+        <p>创建、报名、签到、统计一条线完成</p>
+      </div>
     </div>
 
     <div class="metric-row">
-      <div class="metric">
+      <div class="metric metric-accent">
         <span>组织流程</span>
         <strong>创建 → 报名 → 签到</strong>
       </div>
-      <div class="metric">
+      <div class="metric metric-accent">
         <span>校区支持</span>
         <strong>3 校区 + 线上</strong>
       </div>
