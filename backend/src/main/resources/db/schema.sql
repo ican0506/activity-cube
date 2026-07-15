@@ -1,0 +1,2 @@
+-- Keep an IDE-friendly copy under backend resources.
+-- Use docs/sql/activity_cube.sql in Navicat to initialize the activity_cube database.

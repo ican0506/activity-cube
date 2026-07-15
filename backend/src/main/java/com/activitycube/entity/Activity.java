@@ -1,0 +1,32 @@
+package com.activitycube.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+@TableName("activity")
+public class Activity {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    private String title;
+    private String description;
+    private String campus;
+    private String location;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private LocalDateTime registerStartTime;
+    private LocalDateTime registerEndTime;
+    private Integer maxParticipants;
+    private Boolean allowCrossCampus;
+    private String status;
+    private Long creatorId;
+    @TableField("create_time")
+    private LocalDateTime createdAt;
+    @TableField("update_time")
+    private LocalDateTime updatedAt;
+}
