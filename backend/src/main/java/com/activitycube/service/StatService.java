@@ -48,7 +48,7 @@ public class StatService {
         stats.setAbsenceCount(registrationCount - checkinCount);
         stats.setCheckinRate(registrationCount == 0 ? 0 : checkinCount * 100.0 / registrationCount);
         stats.setFeedbackCount((long) feedbacks.size());
-        stats.setAverageRating(feedbacks.isEmpty() ? 0 : feedbacks.stream().mapToInt(Feedback::getRating).average().orElse(0));
+        stats.setAverageRating(feedbacks.isEmpty() ? 0 : feedbacks.stream().mapToInt(Feedback::getScore).average().orElse(0));
         stats.setCampusStats(campusStats);
         return stats;
     }

@@ -7,3 +7,7 @@ export function submitFeedback(id, data) {
 export function listFeedbacks(id) {
   return request.get(`/activities/${id}/feedbacks`)
 }
+
+export function getFeedbackStats(id) {
+  return request.get(`/activities/${id}/feedback-stats`)
+}

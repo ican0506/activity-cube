@@ -852,6 +852,65 @@ a {
   color: var(--ac-ink);
 }
 
+.feedback-rate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ac-primary-strong);
+  font-weight: 800;
+}
+
+.feedback-stats-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.feedback-chart {
+  height: 320px;
+}
+
+.feedback-list {
+  display: grid;
+  gap: 10px;
+}
+
+.feedback-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(22, 160, 133, 0.12);
+  border-radius: 14px;
+  background: #f7fcf9;
+}
+
+.feedback-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.feedback-item p {
+  margin: 0;
+  color: #38524a;
+  line-height: 1.7;
+}
+
+.feedback-item p span {
+  color: var(--ac-primary-strong);
+  font-weight: 800;
+}
+
+.feedback-item small {
+  color: var(--ac-muted);
+}
+
+.feedback-table-panel {
+  margin-top: 16px;
+}
+
 @keyframes lotteryPulse {
   from {
     transform: translateY(-3px) scale(0.98);
@@ -926,7 +985,8 @@ a {
   .hero,
   .detail-layout,
   .qr-manage-grid,
-  .lottery-layout {
+  .lottery-layout,
+  .feedback-stats-grid {
     grid-template-columns: 1fr;
   }
 

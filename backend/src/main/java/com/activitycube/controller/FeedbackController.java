@@ -5,6 +5,8 @@ import com.activitycube.dto.FeedbackRequest;
 import com.activitycube.entity.Feedback;
 import com.activitycube.service.FeedbackService;
 import com.activitycube.util.AuthUtil;
+import com.activitycube.vo.FeedbackStats;
+import com.activitycube.vo.FeedbackView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +28,12 @@ public class FeedbackController {
     }
 
     @GetMapping("/api/activities/{id}/feedbacks")
-    public Result<List<Feedback>> feedbacks(@PathVariable Long id) {
+    public Result<List<FeedbackView>> feedbacks(@PathVariable Long id) {
         return Result.success(feedbackService.listByActivity(id, AuthUtil.requireUser()));
+    }
+
+    @GetMapping("/api/activities/{id}/feedback-stats")
+    public Result<FeedbackStats> stats(@PathVariable Long id) {
+        return Result.success(feedbackService.stats(id, AuthUtil.requireUser()));
     }
 }

@@ -27,7 +27,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="startTime" label="开始时间" min-width="170" />
-        <el-table-column label="操作" width="760" fixed="right">
+        <el-table-column label="操作" width="870" fixed="right">
           <template #default="{ row }">
             <RouterLink :to="`/admin/activities/${row.id}/edit`"><el-button size="small" :icon="Edit">编辑</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/qrcodes`"><el-button size="small" :icon="Tickets">二维码</el-button></RouterLink>
@@ -35,6 +35,7 @@
             <RouterLink :to="`/admin/activities/${row.id}/checkins`"><el-button size="small" :icon="Checked">签到</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/lottery`"><el-button size="small" :icon="MagicStick">抽奖</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/tools`"><el-button size="small" :icon="Tools">工具</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/feedbacks`"><el-button size="small" :icon="ChatDotRound">反馈</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/stats`"><el-button size="small" :icon="DataAnalysis">统计</el-button></RouterLink>
             <el-button size="small" type="danger" :icon="Delete" @click="remove(row.id)">删除</el-button>
           </template>
@@ -48,7 +49,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Checked, DataAnalysis, Delete, Edit, MagicStick, Plus, Tickets, Tools, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Checked, DataAnalysis, Delete, Edit, MagicStick, Plus, Tickets, Tools, User } from '@element-plus/icons-vue'
 import { deleteActivity, listActivities } from '../../api/activity'
 import { statusText } from '../../utils/options'
 

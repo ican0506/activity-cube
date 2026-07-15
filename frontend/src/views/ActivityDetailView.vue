@@ -34,6 +34,9 @@
             <RouterLink :to="`/activities/${id}/checkin`">
               <el-button :icon="Checked">扫码签到入口</el-button>
             </RouterLink>
+            <RouterLink :to="`/activities/${id}/feedback`">
+              <el-button :icon="ChatDotRound">活动反馈</el-button>
+            </RouterLink>
           </div>
         </div>
 
@@ -73,7 +76,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import QRCode from 'qrcode'
-import { Calendar, Checked, EditPen, Location } from '@element-plus/icons-vue'
+import { Calendar, ChatDotRound, Checked, EditPen, Location } from '@element-plus/icons-vue'
 import { getActivity } from '../api/activity'
 import { buildActivityQrLinks } from '../utils/qrLinks'
 import { statusText } from '../utils/options'

@@ -15,8 +15,18 @@ public class Feedback {
     private Long id;
     private Long activityId;
     private Long userId;
-    private Integer rating;
+    private Integer score;
     private String content;
+    private String suggestion;
+    private Boolean anonymous;
     @TableField("create_time")
     private LocalDateTime createdAt;
+
+    public Integer getRating() {
+        return score;
+    }
+
+    public void setRating(Integer rating) {
+        this.score = rating;
+    }
 }
