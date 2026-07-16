@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { buildLoginRedirect, normalizeLoginTarget } from '../utils/authSession'
 
 const routes = [
   { path: '/', component: () => import('../views/HomeView.vue'), meta: { requiresAuth: true } },
@@ -13,6 +14,7 @@ const routes = [
   { path: '/my/registrations', component: () => import('../views/student/MyRegistrationsView.vue'), meta: { requiresAuth: true } },
   { path: '/my/checkins', component: () => import('../views/student/MyCheckinsView.vue'), meta: { requiresAuth: true } },
   { path: '/admin/dashboard', component: () => import('../views/admin/DashboardView.vue'), meta: { requiresAuth: true, requiresManager: true } },
+  { path: '/admin/users', component: () => import('../views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/activities', component: () => import('../views/admin/AdminActivitiesView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/create', component: () => import('../views/admin/ActivityFormView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activities/:id/edit', component: () => import('../views/admin/ActivityFormView.vue'), meta: { requiresAuth: true, requiresManager: true } },
@@ -33,12 +35,15 @@ const router = createRouter({
 router.beforeEach((to) => {
   const userStore = useUserStore()
   if ((to.path === '/login' || to.path === '/register') && userStore.isLogin) {
-    return '/activities'
+    return normalizeLoginTarget(to.query.redirect)
   }
   if (to.meta.requiresAuth && !userStore.isLogin) {
-    return `/login?redirect=${encodeURIComponent(to.fullPath)}`
+    return buildLoginRedirect(to.path, to.fullPath.slice(to.path.length))
   }
   if (to.meta.requiresManager && !userStore.canManage) {
+    return '/activities'
+  }
+  if (to.meta.requiresAdmin && !userStore.canAdmin) {
     return '/activities'
   }
   return true

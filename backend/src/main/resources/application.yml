@@ -9,6 +9,10 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:activity_cube}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USER:root}
     password: "${DB_PASSWORD:root123}"
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 120MB
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
@@ -21,4 +25,5 @@ mybatis-plus:
       id-type: auto
 
 activity-cube:
-  cors-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  cors-origins: ${FRONTEND_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://10.*.*.*:5173,http://172.16.*.*:5173,http://172.17.*.*:5173,http://172.18.*.*:5173,http://172.19.*.*:5173,http://172.20.*.*:5173,http://172.21.*.*:5173,http://172.22.*.*:5173,http://172.23.*.*:5173,http://172.24.*.*:5173,http://172.25.*.*:5173,http://172.26.*.*:5173,http://172.27.*.*:5173,http://172.28.*.*:5173,http://172.29.*.*:5173,http://172.30.*.*:5173,http://172.31.*.*:5173,http://192.168.*.*:5173}
+  upload-dir: ${UPLOAD_DIR:uploads}

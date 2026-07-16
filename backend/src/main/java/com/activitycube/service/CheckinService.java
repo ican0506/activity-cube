@@ -1,13 +1,16 @@
 package com.activitycube.service;
 
 import com.activitycube.common.BusinessException;
+import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.CheckinMapper;
+import com.activitycube.util.ActivityStatusUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,14 +24,16 @@ public class CheckinService {
     private final RegistrationService registrationService;
     private final ActivityService activityService;
 
-    public Checkin checkin(Long activityId, User user) {
-        var activity = activityService.requireActivity(activityId);
-        validateCheckinTime(activity.getStartTime(), activity.getEndTime());
+    public Checkin checkin(Long activityId, User user, String checkinCode) {
+        Activity activity = activityService.requireActivity(activityId);
+        validateActivityStatus(activity);
+        validateCheckinTime(activity);
+        validateOfflineCheckinCode(activity, checkinCode);
         Registration registration = registrationService.requireRegistration(activityId, user.getId());
         if (checkinMapper.selectCount(new LambdaQueryWrapper<Checkin>()
                 .eq(Checkin::getActivityId, activityId)
                 .eq(Checkin::getUserId, user.getId())) > 0) {
-            throw new BusinessException("不能重复签到");
+            throw new BusinessException("你已签到，请勿重复提交");
         }
         Checkin checkin = new Checkin();
         checkin.setActivityId(activityId);
@@ -40,11 +45,45 @@ public class CheckinService {
         return checkin;
     }
 
-    private void validateCheckinTime(LocalDateTime startTime, LocalDateTime endTime) {
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(startTime) || now.isAfter(endTime)) {
-            throw new BusinessException("当前不在签到时间内");
+    private void validateActivityStatus(Activity activity) {
+        String status = ActivityStatusUtil.calculateStatus(activity);
+        if (ActivityStatusUtil.CANCELLED.equals(status)) {
+            throw new BusinessException("当前活动已取消");
         }
+        if (ActivityStatusUtil.ENDED.equals(status)) {
+            throw new BusinessException("当前活动已结束");
+        }
+        if (ActivityStatusUtil.DRAFT.equals(status)) {
+            throw new BusinessException("活动尚未发布");
+        }
+    }
+
+    private void validateCheckinTime(Activity activity) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime checkinStartTime = activity.getCheckinStartTime() == null ? activity.getStartTime() : activity.getCheckinStartTime();
+        LocalDateTime checkinEndTime = activity.getCheckinEndTime() == null ? activity.getEndTime() : activity.getCheckinEndTime();
+        if (checkinStartTime != null && now.isBefore(checkinStartTime)) {
+            throw new BusinessException("签到尚未开始");
+        }
+        if (checkinEndTime != null && now.isAfter(checkinEndTime)) {
+            if (isOffline(activity)) {
+                throw new BusinessException("签到二维码已过期，请重新扫码");
+            }
+            throw new BusinessException("签到已结束");
+        }
+    }
+
+    private void validateOfflineCheckinCode(Activity activity, String checkinCode) {
+        if (!isOffline(activity)) {
+            return;
+        }
+        if (!StringUtils.hasText(checkinCode) || !checkinCode.equals(activity.getCheckinCode())) {
+            throw new BusinessException("线下活动需扫描现场签到二维码");
+        }
+    }
+
+    private boolean isOffline(Activity activity) {
+        return !ActivityService.MODE_ONLINE.equals(activity.getActivityMode());
     }
 
     public List<Checkin> listByActivity(Long activityId, User user) {

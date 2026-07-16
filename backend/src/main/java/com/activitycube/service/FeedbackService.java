@@ -2,10 +2,12 @@ package com.activitycube.service;
 
 import com.activitycube.common.BusinessException;
 import com.activitycube.dto.FeedbackRequest;
+import com.activitycube.entity.Activity;
 import com.activitycube.entity.Feedback;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.UserMapper;
+import com.activitycube.util.ActivityStatusUtil;
 import com.activitycube.vo.FeedbackStats;
 import com.activitycube.vo.FeedbackView;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -28,12 +30,15 @@ public class FeedbackService {
     private final UserMapper userMapper;
 
     public Feedback submit(Long activityId, FeedbackRequest request, User user) {
-        activityService.requireActivity(activityId);
+        Activity activity = activityService.requireActivity(activityId);
+        if (!ActivityStatusUtil.ENDED.equals(ActivityStatusUtil.calculateStatus(activity))) {
+            throw new BusinessException("活动结束后才可以提交反馈");
+        }
         registrationService.requireRegistration(activityId, user.getId());
         if (feedbackMapper.selectCount(new LambdaQueryWrapper<Feedback>()
                 .eq(Feedback::getActivityId, activityId)
                 .eq(Feedback::getUserId, user.getId())) > 0) {
-            throw new BusinessException("不能重复提交反馈");
+            throw new BusinessException("你已提交过反馈");
         }
         Feedback feedback = new Feedback();
         feedback.setActivityId(activityId);
@@ -99,7 +104,7 @@ public class FeedbackService {
         view.setAnonymous(Boolean.TRUE.equals(feedback.getAnonymous()));
         view.setCreatedAt(feedback.getCreatedAt());
         if (Boolean.TRUE.equals(feedback.getAnonymous())) {
-            view.setRealName("匿名用户");
+            view.setRealName("匿名同学");
         } else {
             User user = userMapper.selectById(feedback.getUserId());
             view.setRealName(user == null ? "未知用户" : user.getRealName());

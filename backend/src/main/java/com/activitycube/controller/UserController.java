@@ -13,6 +13,9 @@ public class UserController {
     @GetMapping("/me")
     public Result<User> me() {
         User user = AuthUtil.requireUser();
+        if ("user".equals(user.getRole())) {
+            user.setRole("student");
+        }
         user.setPassword(null);
         return Result.success(user);
     }

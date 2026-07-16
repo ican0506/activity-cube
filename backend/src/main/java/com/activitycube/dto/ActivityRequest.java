@@ -12,6 +12,8 @@ public class ActivityRequest {
     private String title;
     @NotBlank
     private String description;
+    private String coverUrl;
+    private String activityMode;
     @NotBlank
     private String campus;
     @NotBlank
@@ -24,6 +26,10 @@ public class ActivityRequest {
     private LocalDateTime registerStartTime;
     @NotNull
     private LocalDateTime registerEndTime;
+    @NotNull
+    private LocalDateTime checkinStartTime;
+    @NotNull
+    private LocalDateTime checkinEndTime;
     private Integer maxParticipants;
     @NotNull
     private Boolean allowCrossCampus;

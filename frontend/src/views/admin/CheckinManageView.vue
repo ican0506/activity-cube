@@ -12,32 +12,49 @@
     </div>
 
     <div class="metric-row">
-      <div class="metric"><span>已签到</span><strong>{{ checkins.length }}</strong></div>
+      <div class="metric metric-accent"><span>已签到</span><strong>{{ checkins.length }}</strong></div>
       <div class="metric"><span>未签到</span><strong>{{ absences.length }}</strong></div>
       <div class="metric"><span>签到率</span><strong>{{ rate }}%</strong></div>
     </div>
 
-    <div class="panel qr-box">
-      <canvas ref="qr"></canvas>
-      <span class="page-subtitle">{{ checkinUrl }}</span>
+    <div class="panel qr-card">
+      <div class="qr-box">
+        <canvas ref="qr"></canvas>
+      </div>
+      <div>
+        <h3>签到二维码</h3>
+        <p class="page-subtitle">{{ checkinUrl }}</p>
+      </div>
     </div>
 
-    <div class="grid" style="grid-template-columns: 1fr 1fr; margin-top: 16px">
+    <div class="checkin-grid" style="margin-top: 16px">
       <div class="panel">
-        <h3>已签到名单</h3>
+        <div class="section-title">
+          <div>
+            <h2>已签到名单</h2>
+            <p>活动时间内完成签到的记录。</p>
+          </div>
+        </div>
         <el-table :data="checkins" stripe>
-          <el-table-column prop="userId" label="用户ID" />
+          <el-table-column prop="userId" label="用户ID" width="100" />
           <el-table-column prop="campus" label="校区" />
-          <el-table-column prop="checkinTime" label="签到时间" />
+          <el-table-column prop="checkinTime" label="签到时间" min-width="170" />
         </el-table>
+        <el-empty v-if="!checkins.length" description="暂无签到数据" />
       </div>
       <div class="panel">
-        <h3>未签到名单</h3>
+        <div class="section-title">
+          <div>
+            <h2>未签到名单</h2>
+            <p>已报名但未签到的学生。</p>
+          </div>
+        </div>
         <el-table :data="absences" stripe>
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="studentNo" label="学号" />
           <el-table-column prop="campus" label="校区" />
         </el-table>
+        <el-empty v-if="!absences.length" description="暂无未签到数据" />
       </div>
     </div>
   </section>
@@ -60,7 +77,9 @@ const activity = ref(null)
 const registrations = ref([])
 const checkins = ref([])
 const absences = ref([])
-const checkinUrl = buildActivityQrLinks(location.origin, route.params.id).checkinUrl
+const checkinUrl = computed(() => buildActivityQrLinks(location.origin, route.params.id, {
+  checkinCode: activity.value?.checkinCode
+}).checkinUrl)
 const rate = computed(() => {
   const total = checkins.value.length + absences.value.length
   return total ? Math.round((checkins.value.length * 10000) / total) / 100 : 0
@@ -78,11 +97,11 @@ async function load() {
   checkins.value = checkinRows
   absences.value = absenceRows
   await nextTick()
-  QRCode.toCanvas(qr.value, checkinUrl, { width: 180 })
+  if (qr.value) QRCode.toCanvas(qr.value, checkinUrl.value, { width: 180 })
 }
 
 async function copyLink() {
-  await navigator.clipboard.writeText(checkinUrl)
+  await navigator.clipboard.writeText(checkinUrl.value)
   ElMessage.success('已复制')
 }
 

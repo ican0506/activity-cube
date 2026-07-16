@@ -6,12 +6,12 @@ import com.activitycube.entity.Activity;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.RegistrationMapper;
+import com.activitycube.util.ActivityStatusUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -22,12 +22,11 @@ public class RegistrationService {
 
     public Registration register(Long activityId, RegisterRequest request, User user) {
         Activity activity = activityService.requireActivity(activityId);
-        validateRegistration(activity, user);
+        validateRegistration(activity, request, user);
         Registration registration = new Registration();
         BeanUtils.copyProperties(request, registration);
         registration.setActivityId(activityId);
         registration.setUserId(user.getId());
-        registration.setCreatedAt(LocalDateTime.now());
         registrationMapper.insert(registration);
         return registration;
     }
@@ -54,24 +53,29 @@ public class RegistrationService {
                 .eq(Registration::getActivityId, activityId)
                 .eq(Registration::getUserId, userId));
         if (registration == null) {
-            throw new BusinessException("请先报名再签到");
+            throw new BusinessException("你尚未报名，不能签到");
         }
         return registration;
     }
 
-    private void validateRegistration(Activity activity, User user) {
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(activity.getRegisterStartTime()) || now.isAfter(activity.getRegisterEndTime())) {
-            throw new BusinessException("当前不在报名时间内");
+    private void validateRegistration(Activity activity, RegisterRequest request, User user) {
+        String calculatedStatus = ActivityStatusUtil.calculateStatus(activity);
+        if (!ActivityStatusUtil.REGISTERING.equals(calculatedStatus)) {
+            throw new BusinessException(registrationClosedMessage(calculatedStatus));
         }
         if (registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
                 .eq(Registration::getActivityId, activity.getId())
                 .eq(Registration::getUserId, user.getId())) > 0) {
-            throw new BusinessException("不能重复报名");
+            throw new BusinessException("你已报名，请勿重复提交");
+        }
+        if (registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getActivityId, activity.getId())
+                .eq(Registration::getStudentNo, request.getStudentNo())) > 0) {
+            throw new BusinessException("你已报名，请勿重复提交");
         }
         if (activity.getMaxParticipants() != null
                 && activityService.countRegistrations(activity.getId()) >= activity.getMaxParticipants()) {
-            throw new BusinessException("报名人数已满");
+            throw new BusinessException("该活动人数已满");
         }
         boolean campusLimited = !Boolean.TRUE.equals(activity.getAllowCrossCampus())
                 && !"全校区".equals(activity.getCampus())
@@ -79,5 +83,16 @@ public class RegistrationService {
         if (campusLimited && !activity.getCampus().equals(user.getCampus())) {
             throw new BusinessException("该活动不允许跨校区报名");
         }
+    }
+
+    private String registrationClosedMessage(String status) {
+        return switch (status) {
+            case ActivityStatusUtil.DRAFT -> "当前活动尚未发布";
+            case ActivityStatusUtil.CANCELLED -> "当前活动已取消";
+            case ActivityStatusUtil.NOT_STARTED -> "当前活动未开始报名";
+            case ActivityStatusUtil.WAITING_START, ActivityStatusUtil.ONGOING -> "当前活动报名已结束";
+            case ActivityStatusUtil.ENDED -> "当前活动已结束";
+            default -> "当前活动不能报名";
+        };
     }
 }

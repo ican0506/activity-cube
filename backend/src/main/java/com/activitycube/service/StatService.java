@@ -46,10 +46,17 @@ public class StatService {
         stats.setRegistrationCount(registrationCount);
         stats.setCheckinCount(checkinCount);
         stats.setAbsenceCount(registrationCount - checkinCount);
-        stats.setCheckinRate(registrationCount == 0 ? 0 : checkinCount * 100.0 / registrationCount);
+        stats.setCheckinRate(rate(checkinCount, registrationCount));
+        stats.setRegistrationToCheckinRate(rate(checkinCount, registrationCount));
+        stats.setCheckinToFeedbackRate(rate(feedbacks.size(), checkinCount));
+        stats.setRegistrationToFeedbackRate(rate(feedbacks.size(), registrationCount));
         stats.setFeedbackCount((long) feedbacks.size());
         stats.setAverageRating(feedbacks.isEmpty() ? 0 : feedbacks.stream().mapToInt(Feedback::getScore).average().orElse(0));
         stats.setCampusStats(campusStats);
         return stats;
+    }
+
+    private double rate(long numerator, long denominator) {
+        return denominator == 0 ? 0 : numerator * 100.0 / denominator;
     }
 }

@@ -22,6 +22,7 @@ public class User {
     private String college;
     private String majorClass;
     private String phone;
+    private Integer status;
     @TableField("create_time")
     private LocalDateTime createdAt;
     @TableField("update_time")

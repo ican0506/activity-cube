@@ -1,7 +1,9 @@
 import request from './request'
 
-export function checkinActivity(id) {
-  return request.post(`/activities/${id}/checkin`)
+export function checkinActivity(id, code) {
+  return request.post(`/activities/${id}/checkin`, null, {
+    params: code ? { code } : undefined
+  })
 }
 
 export function listCheckins(id) {

@@ -27,19 +27,9 @@
             <el-input-number v-model="form.count" :min="1" :max="999" />
           </el-form-item>
           <el-form-item label="重复中奖">
-            <el-switch
-              v-model="form.allowRepeat"
-              active-text="允许"
-              inactive-text="不允许"
-            />
+            <el-switch v-model="form.allowRepeat" active-text="允许" inactive-text="不允许" />
           </el-form-item>
-          <el-button
-            class="lottery-start"
-            type="primary"
-            :icon="MagicStick"
-            :loading="drawing"
-            @click="startDraw"
-          >
+          <el-button class="lottery-start" type="primary" :icon="MagicStick" :loading="drawing" @click="startDraw">
             开始抽奖
           </el-button>
         </el-form>
@@ -88,7 +78,7 @@
       <div class="section-title">
         <div>
           <h2>历史抽奖结果</h2>
-          <p>按抽奖轮次查看已保存的中奖名单。</p>
+          <p>按抽奖轮次查看已经保存的中奖名单。</p>
         </div>
         <el-button :icon="Refresh" @click="loadHistory">刷新</el-button>
       </div>

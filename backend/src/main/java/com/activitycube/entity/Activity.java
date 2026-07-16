@@ -15,12 +15,17 @@ public class Activity {
     private Long id;
     private String title;
     private String description;
+    private String coverUrl;
+    private String activityMode;
+    private String checkinCode;
     private String campus;
     private String location;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private LocalDateTime registerStartTime;
     private LocalDateTime registerEndTime;
+    private LocalDateTime checkinStartTime;
+    private LocalDateTime checkinEndTime;
     private Integer maxParticipants;
     private Boolean allowCrossCampus;
     private String status;

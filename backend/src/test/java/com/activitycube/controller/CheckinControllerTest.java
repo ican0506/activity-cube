@@ -1,6 +1,7 @@
 package com.activitycube.controller;
 
 import com.activitycube.entity.Registration;
+import com.activitycube.entity.Checkin;
 import com.activitycube.entity.User;
 import com.activitycube.service.CheckinService;
 import com.activitycube.util.UserContext;
@@ -21,6 +22,20 @@ class CheckinControllerTest {
     @AfterEach
     void clearUser() {
         UserContext.clear();
+    }
+
+    @Test
+    void forwardsCheckinCodeToService() {
+        User user = new User();
+        user.setId(2L);
+        UserContext.set(user);
+        Checkin checkin = new Checkin();
+        when(checkinService.checkin(1L, user, "abc123")).thenReturn(checkin);
+
+        var response = controller.checkin(1L, "abc123");
+
+        assertThat(response.getData()).isEqualTo(checkin);
+        verify(checkinService).checkin(1L, user, "abc123");
     }
 
     @Test

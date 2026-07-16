@@ -35,6 +35,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             response.getWriter().write("{\"code\":401,\"message\":\"请先登录\",\"data\":null}");
             return false;
         }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\":401,\"message\":\"账号已禁用，请联系管理员\",\"data\":null}");
+            return false;
+        }
         UserContext.set(user);
         return true;
     }

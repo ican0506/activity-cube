@@ -1,27 +1,30 @@
 <template>
   <el-config-provider>
-    <RouterView v-if="isLoginPage" />
+    <RouterView v-if="isAuthPage" />
     <div v-else class="app-shell">
       <header class="topbar">
         <RouterLink class="brand" to="/">
-          <span class="brand-mark">魔</span>
-          <span>
+          <span class="brand-mark">AC</span>
+          <span class="brand-copy">
             <strong>活动魔方</strong>
-            <small>校园活动轻工具</small>
+            <small>校园活动轻工具平台</small>
           </span>
         </RouterLink>
+
         <nav class="nav">
           <RouterLink to="/activities">活动大厅</RouterLink>
           <RouterLink v-if="userStore.isLogin" to="/my/registrations">我的报名</RouterLink>
           <RouterLink v-if="userStore.isLogin" to="/my/checkins">我的签到</RouterLink>
-          <RouterLink v-if="userStore.canManage" to="/admin/dashboard">后台首页</RouterLink>
-          <RouterLink v-if="userStore.canManage" to="/admin/activities">我的活动</RouterLink>
+          <RouterLink v-if="userStore.canManage" to="/admin/dashboard">数据总览</RouterLink>
+          <RouterLink v-if="userStore.canManage" to="/admin/activities">活动管理</RouterLink>
+          <RouterLink v-if="userStore.canAdmin" to="/admin/users">用户管理</RouterLink>
         </nav>
+
         <div class="user-box">
           <template v-if="userStore.isLogin">
             <div class="user-profile">
-              <div class="user-name">{{ userStore.userInfo.realName }}</div>
-              <div class="user-meta">{{ userStore.userInfo.role }} · {{ userStore.userInfo.campus }}</div>
+              <div class="user-name">{{ userStore.userInfo.realName || userStore.userInfo.username }}</div>
+              <div class="user-meta">{{ userRoleText(userStore.userInfo.role) }} · {{ userStore.userInfo.campus }}</div>
             </div>
             <el-button size="small" plain @click="logout">退出</el-button>
           </template>
@@ -30,6 +33,7 @@
           </RouterLink>
         </div>
       </header>
+
       <main class="main-panel">
         <RouterView />
       </main>
@@ -41,11 +45,12 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from './stores/user'
+import { userRoleText } from './utils/options'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const isLoginPage = computed(() => route.path === '/login' || route.path === '/register')
+const isAuthPage = computed(() => route.path === '/login' || route.path === '/register')
 
 function logout() {
   userStore.logout()

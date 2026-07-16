@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 
 const ILLEGAL_FILE_CHARS = /[\\/:*?"<>|]/g
+const ROSTER_HEADERS = ['姓名', '学号', '学院', '班级', '手机号', '校区', '报名时间', '签到时间']
 
 export function safeExcelFileName(activityName, suffix) {
   const safeName = String(activityName || '活动')
@@ -31,7 +32,7 @@ export function buildRosterRows(registrations = [], checkins = []) {
   return registrations.map((item) => {
     const checkin = checkinByKey.get(keyByRegistration(item)) || checkinByKey.get(keyByUser(item))
     return {
-      姓名: item.name || '',
+      姓名: item.name || item.realName || '',
       学号: item.studentNo || '',
       学院: item.college || '',
       班级: item.majorClass || item.className || '',
@@ -45,9 +46,7 @@ export function buildRosterRows(registrations = [], checkins = []) {
 
 export function exportRosterExcel({ activityName, suffix, registrations = [], checkins = [] }) {
   const rows = buildRosterRows(registrations, checkins)
-  const worksheet = XLSX.utils.json_to_sheet(rows, {
-    header: ['姓名', '学号', '学院', '班级', '手机号', '校区', '报名时间', '签到时间']
-  })
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: ROSTER_HEADERS })
   worksheet['!cols'] = [
     { wch: 12 },
     { wch: 16 },

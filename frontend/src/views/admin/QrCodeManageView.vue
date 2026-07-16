@@ -45,7 +45,7 @@
         <div class="qr-card-head">
           <div>
             <h3>签到二维码</h3>
-            <p class="page-subtitle">活动开始后学生扫码进入签到页，确认后写入签到记录。</p>
+            <p class="page-subtitle">线下活动签到码会携带现场校验 code，建议只在活动现场展示。</p>
           </div>
           <el-tag type="warning">签到</el-tag>
         </div>
@@ -66,7 +66,7 @@
       type="success"
       :closable="false"
       show-icon
-      description="报名二维码适合提前发布；签到二维码建议只在活动开始时展示。签到仍会走后端规则校验，未报名、重复签到、非活动时间都会被拦截。"
+      description="报名二维码适合提前发布；线下活动签到二维码必须携带签到码，建议只在活动开始时展示。签到仍会走后端规则校验，未报名、重复签到、非活动时间都会被拦截。"
     />
   </section>
 </template>
@@ -79,7 +79,7 @@ import { Checked, CopyDocument, View } from '@element-plus/icons-vue'
 import QRCode from 'qrcode'
 import { getActivity } from '../../api/activity'
 import { buildActivityQrLinks } from '../../utils/qrLinks'
-import { statusText } from '../../utils/options'
+import { statusTagType, statusText } from '../../utils/options'
 
 const route = useRoute()
 const id = route.params.id
@@ -87,7 +87,9 @@ const loading = ref(false)
 const activity = ref(null)
 const registerQr = ref(null)
 const checkinQr = ref(null)
-const links = computed(() => buildActivityQrLinks(location.origin, id))
+const links = computed(() => buildActivityQrLinks(location.origin, id, {
+  checkinCode: activity.value?.checkinCode
+}))
 
 async function load() {
   loading.value = true
@@ -117,17 +119,6 @@ async function copy(url) {
 
 function open(url) {
   window.open(url, '_blank', 'noopener,noreferrer')
-}
-
-function statusTagType(status) {
-  const map = {
-    REGISTERING: 'success',
-    ONGOING: 'warning',
-    ENDED: 'info',
-    CANCELLED: 'danger',
-    DRAFT: ''
-  }
-  return map[status] || ''
 }
 
 onMounted(load)

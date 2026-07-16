@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -19,8 +20,8 @@ public class CheckinController {
     private final CheckinService checkinService;
 
     @PostMapping("/api/activities/{id}/checkin")
-    public Result<Checkin> checkin(@PathVariable Long id) {
-        return Result.success(checkinService.checkin(id, AuthUtil.requireUser()));
+    public Result<Checkin> checkin(@PathVariable Long id, @RequestParam(required = false) String code) {
+        return Result.success(checkinService.checkin(id, AuthUtil.requireUser(), code));
     }
 
     @GetMapping("/api/activities/{id}/checkins")

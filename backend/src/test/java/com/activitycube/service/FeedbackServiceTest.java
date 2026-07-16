@@ -2,6 +2,7 @@ package com.activitycube.service;
 
 import com.activitycube.common.BusinessException;
 import com.activitycube.dto.FeedbackRequest;
+import com.activitycube.entity.Activity;
 import com.activitycube.entity.Feedback;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.FeedbackMapper;
@@ -10,6 +11,7 @@ import com.activitycube.vo.FeedbackView;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,6 +38,7 @@ class FeedbackServiceTest {
         request.setAnonymous(true);
         User user = new User();
         user.setId(3L);
+        when(activityService.requireActivity(1L)).thenReturn(endedActivity());
 
         Feedback feedback = feedbackService.submit(1L, request, user);
 
@@ -52,11 +55,30 @@ class FeedbackServiceTest {
         request.setScore(4);
         User user = new User();
         user.setId(3L);
+        when(activityService.requireActivity(1L)).thenReturn(endedActivity());
         when(feedbackMapper.selectCount(any())).thenReturn(1L);
 
         assertThatThrownBy(() -> feedbackService.submit(1L, request, user))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("不能重复提交反馈");
+                .hasMessage("你已提交过反馈");
+        verify(feedbackMapper, never()).insert(any(Feedback.class));
+    }
+
+    @Test
+    void rejectsFeedbackBeforeActivityEnds() {
+        FeedbackRequest request = new FeedbackRequest();
+        request.setScore(4);
+        User user = new User();
+        user.setId(3L);
+        Activity activity = new Activity();
+        activity.setId(1L);
+        activity.setStatus("ONGOING");
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+
+        assertThatThrownBy(() -> feedbackService.submit(1L, request, user))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("活动结束后才可以提交反馈");
+        verify(registrationService, never()).requireRegistration(anyLong(), anyLong());
         verify(feedbackMapper, never()).insert(any(Feedback.class));
     }
 
@@ -73,9 +95,20 @@ class FeedbackServiceTest {
         List<FeedbackView> views = feedbackService.listByActivity(1L, manager());
 
         assertThat(views).hasSize(2);
-        assertThat(views.get(0).getRealName()).isEqualTo("匿名用户");
+        assertThat(views.get(0).getRealName()).isEqualTo("匿名同学");
         assertThat(views.get(1).getRealName()).isEqualTo("李四");
         verify(userMapper, never()).selectById(3L);
+    }
+
+    private Activity endedActivity() {
+        Activity activity = new Activity();
+        activity.setId(1L);
+        activity.setStatus("PUBLISHED");
+        activity.setRegisterStartTime(LocalDateTime.now().minusHours(5));
+        activity.setRegisterEndTime(LocalDateTime.now().minusHours(4));
+        activity.setStartTime(LocalDateTime.now().minusHours(3));
+        activity.setEndTime(LocalDateTime.now().minusHours(2));
+        return activity;
     }
 
     private Feedback feedback(Long userId, boolean anonymous) {

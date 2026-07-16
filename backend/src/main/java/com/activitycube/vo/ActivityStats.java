@@ -11,6 +11,9 @@ public class ActivityStats {
     private Long checkinCount;
     private Long absenceCount;
     private Double checkinRate;
+    private Double registrationToCheckinRate;
+    private Double checkinToFeedbackRate;
+    private Double registrationToFeedbackRate;
     private Long feedbackCount;
     private Double averageRating;
     private List<CampusStat> campusStats;

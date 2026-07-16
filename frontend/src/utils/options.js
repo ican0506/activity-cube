@@ -1,14 +1,144 @@
 export const campuses = ['全部', '全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上']
 export const userCampuses = ['龙子湖校区', '文化路校区', '许昌校区']
-export const statuses = ['全部', 'REGISTERING', 'ONGOING', 'ENDED', 'CANCELLED', 'DRAFT']
+export const activityCampuses = ['全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上']
+export const activityModes = [
+  { label: '线下活动', value: 'offline' },
+  { label: '线上活动', value: 'online' }
+]
+export const statuses = ['全部', 'DRAFT', 'NOT_STARTED', 'REGISTERING', 'WAITING_START', 'ONGOING', 'ENDED', 'CANCELLED']
+export const userRoleOptions = [
+  { label: '全部', value: '' },
+  { label: '学生', value: 'student' },
+  { label: '活动负责人', value: 'organizer' },
+  { label: '管理员', value: 'admin' }
+]
+export const userStatusOptions = [
+  { label: '全部', value: '' },
+  { label: '启用', value: 1 },
+  { label: '禁用', value: 0 }
+]
 
 export function statusText(status) {
   const map = {
     DRAFT: '草稿',
+    PUBLISHED: '已发布',
+    NOT_STARTED: '未开始',
     REGISTERING: '报名中',
+    WAITING_START: '待开始',
     ONGOING: '进行中',
     ENDED: '已结束',
     CANCELLED: '已取消'
   }
-  return map[status] || status
+  return map[status] || status || '-'
+}
+
+export function statusTagType(status) {
+  const map = {
+    DRAFT: 'info',
+    NOT_STARTED: 'primary',
+    REGISTERING: 'success',
+    WAITING_START: 'warning',
+    ONGOING: 'success',
+    ENDED: 'info',
+    CANCELLED: 'danger'
+  }
+  return map[status] || ''
+}
+
+export function canRegister(activity) {
+  return activity?.status === 'REGISTERING'
+}
+
+export function registerDisabledReason(activity) {
+  const status = activity?.status
+  const map = {
+    DRAFT: '当前活动尚未发布',
+    NOT_STARTED: '当前活动未开始报名',
+    WAITING_START: '当前活动报名已结束',
+    ONGOING: '活动已开始，报名已结束',
+    ENDED: '当前活动已结束',
+    CANCELLED: '当前活动已取消'
+  }
+  return map[status] || '当前活动不能报名'
+}
+
+export function canCheckin(activity) {
+  const now = new Date()
+  const start = parseDateTime(activity?.checkinStartTime || activity?.startTime)
+  const end = parseDateTime(activity?.checkinEndTime || activity?.endTime)
+  if (!start || !end) return false
+  return now >= start
+    && now <= end
+    && activity?.status !== 'DRAFT'
+    && activity?.status !== 'CANCELLED'
+    && activity?.status !== 'ENDED'
+}
+
+export function isOnlineActivity(activity) {
+  return activity?.activityMode === 'online'
+}
+
+export function activityModeText(activity) {
+  return isOnlineActivity(activity) ? '线上活动' : '线下活动'
+}
+
+export function checkinDisabledReason(activity) {
+  if (activity?.status === 'DRAFT') return '当前活动尚未发布'
+  if (activity?.status === 'CANCELLED') return '当前活动已取消'
+  if (activity?.status === 'ENDED') return '当前活动已结束'
+  const now = new Date()
+  const start = parseDateTime(activity?.checkinStartTime || activity?.startTime)
+  const end = parseDateTime(activity?.checkinEndTime || activity?.endTime)
+  if (start && now < start) return '签到尚未开始'
+  if (end && now > end) return '签到已结束'
+  return '当前不能签到'
+}
+
+export function canFeedback(activity) {
+  return activity?.status === 'ENDED'
+}
+
+export function feedbackDisabledReason(activity) {
+  if (activity?.status === 'DRAFT') return '当前活动尚未发布'
+  if (activity?.status === 'CANCELLED') return '当前活动已取消'
+  return '活动结束后才可以提交反馈'
+}
+
+export function parseDateTime(value) {
+  if (!value) return null
+  const normalized = String(value).replace(' ', 'T')
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatEmpty(value, fallback = '-') {
+  return value === undefined || value === null || value === '' ? fallback : value
+}
+
+export function userRoleText(role) {
+  const map = {
+    user: '学生',
+    student: '学生',
+    organizer: '活动负责人',
+    admin: '管理员'
+  }
+  return map[role] || role || '-'
+}
+
+export function userRoleTagType(role) {
+  const map = {
+    user: 'success',
+    student: 'success',
+    organizer: 'warning',
+    admin: 'danger'
+  }
+  return map[role] || 'info'
+}
+
+export function userStatusText(status) {
+  return Number(status) === 0 ? '禁用' : '启用'
+}
+
+export function userStatusTagType(status) {
+  return Number(status) === 0 ? 'info' : 'success'
 }

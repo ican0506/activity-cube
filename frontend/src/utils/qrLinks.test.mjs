@@ -15,3 +15,10 @@ test('removes trailing slash from origin before building qr links', () => {
   assert.equal(links.registerUrl, 'http://localhost:5173/activities/8/register')
   assert.equal(links.checkinUrl, 'http://localhost:5173/activities/8/checkin')
 })
+
+test('adds encoded checkin code to checkin qr link when provided', () => {
+  const links = buildActivityQrLinks('http://localhost:5173', 8, { checkinCode: 'abc 123' })
+
+  assert.equal(links.registerUrl, 'http://localhost:5173/activities/8/register')
+  assert.equal(links.checkinUrl, 'http://localhost:5173/activities/8/checkin?code=abc%20123')
+})

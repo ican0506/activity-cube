@@ -9,6 +9,7 @@ import com.activitycube.entity.User;
 import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.RegistrationMapper;
+import com.activitycube.util.ActivityStatusUtil;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.util.UserContext;
 import com.activitycube.vo.ActivityDetail;
@@ -20,10 +21,14 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ActivityService {
+    public static final String MODE_ONLINE = "online";
+    public static final String MODE_OFFLINE = "offline";
+
     private final ActivityMapper activityMapper;
     private final RegistrationMapper registrationMapper;
     private final CheckinMapper checkinMapper;
@@ -37,10 +42,12 @@ public class ActivityService {
         if (StringUtils.hasText(campus) && !"全部".equals(campus)) {
             wrapper.eq(Activity::getCampus, campus);
         }
-        if (StringUtils.hasText(status) && !"全部".equals(status)) {
-            wrapper.eq(Activity::getStatus, status);
-        }
-        return activityMapper.selectList(wrapper);
+        return activityMapper.selectList(wrapper).stream()
+                .peek(this::applyResponseDefaults)
+                .filter(activity -> !StringUtils.hasText(status)
+                        || "全部".equals(status)
+                        || status.equals(activity.getStatus()))
+                .toList();
     }
 
     public ActivityDetail detail(Long id) {
@@ -62,18 +69,26 @@ public class ActivityService {
         AuthUtil.requireOrganizerOrAdmin(creator);
         Activity activity = new Activity();
         BeanUtils.copyProperties(request, activity);
+        activity.setStatus(ActivityStatusUtil.normalizeManualStatus(request.getStatus()));
+        activity.setActivityMode(normalizeActivityMode(request.getActivityMode()));
+        ensureCheckinCodeIfPublished(activity);
         activity.setCreatorId(creator.getId());
         activity.setCreatedAt(LocalDateTime.now());
         activity.setUpdatedAt(LocalDateTime.now());
         activityMapper.insert(activity);
+        applyResponseDefaults(activity);
         return activity;
     }
 
     public Activity update(Long id, ActivityRequest request, User user) {
         Activity activity = requireManageableActivity(id, user);
         BeanUtils.copyProperties(request, activity);
+        activity.setStatus(ActivityStatusUtil.normalizeManualStatus(request.getStatus()));
+        activity.setActivityMode(normalizeActivityMode(request.getActivityMode()));
+        ensureCheckinCodeIfPublished(activity);
         activity.setUpdatedAt(LocalDateTime.now());
         activityMapper.updateById(activity);
+        applyResponseDefaults(activity);
         return activity;
     }
 
@@ -87,6 +102,7 @@ public class ActivityService {
         if (activity == null) {
             throw new BusinessException("活动不存在");
         }
+        applyResponseDefaults(activity);
         return activity;
     }
 
@@ -119,5 +135,29 @@ public class ActivityService {
         return checkinMapper.selectCount(new LambdaQueryWrapper<Checkin>()
                 .eq(Checkin::getActivityId, activityId)
                 .eq(Checkin::getUserId, userId)) > 0;
+    }
+
+    private String normalizeActivityMode(String activityMode) {
+        return MODE_ONLINE.equalsIgnoreCase(activityMode) ? MODE_ONLINE : MODE_OFFLINE;
+    }
+
+    private void ensureCheckinCodeIfPublished(Activity activity) {
+        if (ActivityStatusUtil.DRAFT.equals(activity.getStatus())) {
+            return;
+        }
+        if (!StringUtils.hasText(activity.getCheckinCode())) {
+            activity.setCheckinCode(UUID.randomUUID().toString().replace("-", ""));
+        }
+    }
+
+    private void applyResponseDefaults(Activity activity) {
+        ActivityStatusUtil.applyCalculatedStatus(activity);
+        applyActivityModeDefault(activity);
+    }
+
+    private void applyActivityModeDefault(Activity activity) {
+        if (!StringUtils.hasText(activity.getActivityMode())) {
+            activity.setActivityMode(MODE_OFFLINE);
+        }
     }
 }

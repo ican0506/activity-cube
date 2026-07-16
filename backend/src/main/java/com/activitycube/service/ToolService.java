@@ -30,8 +30,21 @@ public class ToolService {
     public List<List<Registration>> group(Long activityId, GroupRequest request) {
         List<Registration> source = new ArrayList<>(source(activityId, request.getSource()));
         Collections.shuffle(source);
-        int groupSize = resolveGroupSize(source.size(), request);
+        validateGroupRequest(source.size(), request);
         List<List<Registration>> groups = new ArrayList<>();
+        if ("BY_GROUP_COUNT".equalsIgnoreCase(request.getMode())) {
+            int groupCount = Math.min(request.getGroupCount(), source.size());
+            int baseSize = source.size() / groupCount;
+            int remainder = source.size() % groupCount;
+            int index = 0;
+            for (int groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+                int currentSize = baseSize + (groupIndex < remainder ? 1 : 0);
+                groups.add(source.subList(index, index + currentSize));
+                index += currentSize;
+            }
+            return groups;
+        }
+        int groupSize = request.getGroupSize();
         for (int index = 0; index < source.size(); index += groupSize) {
             groups.add(source.subList(index, Math.min(index + groupSize, source.size())));
         }
@@ -53,7 +66,7 @@ public class ToolService {
         throw new BusinessException("抽取来源不正确");
     }
 
-    private int resolveGroupSize(int total, GroupRequest request) {
+    private void validateGroupRequest(int total, GroupRequest request) {
         if (total == 0) {
             throw new BusinessException("候选名单为空");
         }
@@ -61,13 +74,13 @@ public class ToolService {
             if (request.getGroupCount() == null || request.getGroupCount() <= 0) {
                 throw new BusinessException("组数必须大于 0");
             }
-            return (int) Math.ceil(total * 1.0 / request.getGroupCount());
+            return;
         }
         if ("BY_GROUP_SIZE".equalsIgnoreCase(request.getMode())) {
             if (request.getGroupSize() == null || request.getGroupSize() <= 0) {
                 throw new BusinessException("每组人数必须大于 0");
             }
-            return request.getGroupSize();
+            return;
         }
         throw new BusinessException("分组模式不正确");
     }

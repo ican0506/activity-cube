@@ -1,71 +1,173 @@
 <template>
   <section>
-    <div class="admin-intro">
-      <div>
-        <h1>我的活动</h1>
-        <p>集中管理活动发布、报名名单、签到工具和数据统计。</p>
+    <div class="campus-hero admin-campus-hero">
+      <div class="hero-copy">
+        <span class="motto-badge">校园活动中枢</span>
+        <h1>活动管理</h1>
+        <p>面向龙子湖、文化路、许昌三校区，统一管理活动发布、扫码签到、名单导出、抽签分组和反馈复盘。</p>
       </div>
       <RouterLink to="/admin/activities/create">
         <el-button class="hero-button" :icon="Plus">创建活动</el-button>
       </RouterLink>
     </div>
 
-    <div class="metric-row">
-      <div class="metric metric-accent"><span>活动总数</span><strong>{{ rows.length }}</strong></div>
-      <div class="metric"><span>报名中</span><strong>{{ registeringCount }}</strong></div>
-      <div class="metric"><span>进行中</span><strong>{{ ongoingCount }}</strong></div>
-      <div class="metric"><span>已结束</span><strong>{{ endedCount }}</strong></div>
+    <div class="metric-row campus-overview">
+      <div class="metric metric-accent"><span>活动总数</span><strong>{{ managedRows.length }}</strong></div>
+      <div class="metric"><span>报名总数</span><strong>{{ overview.registrationTotal }}</strong></div>
+      <div class="metric"><span>签到总数</span><strong>{{ overview.checkinTotal }}</strong></div>
+      <div class="metric"><span>反馈数量</span><strong>{{ overview.feedbackTotal }}</strong></div>
     </div>
 
-    <div class="panel" v-loading="loading">
-      <el-table :data="rows" stripe>
-        <el-table-column prop="title" label="活动名称" min-width="180" />
-        <el-table-column prop="campus" label="校区" width="120" />
+    <div class="panel admin-table-panel" v-loading="loading">
+      <div class="section-title">
+        <div>
+          <h2>活动列表</h2>
+          <p>保持发布、名单、数据和工具入口清晰可达，适合日常活动负责人快速操作。</p>
+        </div>
+      </div>
+
+      <el-table class="desktop-table" :data="managedRows" stripe>
+        <el-table-column prop="title" label="活动名称" min-width="220" />
+        <el-table-column prop="campus" label="校区" width="130">
+          <template #default="{ row }">
+            <span class="wheat-badge">{{ row.campus || '全校区' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="startTime" label="开始时间" min-width="170" />
-        <el-table-column label="操作" width="870" fixed="right">
+        <el-table-column label="常用操作" width="260">
           <template #default="{ row }">
-            <RouterLink :to="`/admin/activities/${row.id}/edit`"><el-button size="small" :icon="Edit">编辑</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/qrcodes`"><el-button size="small" :icon="Tickets">二维码</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/registrations`"><el-button size="small" :icon="User">报名</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/checkins`"><el-button size="small" :icon="Checked">签到</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/lottery`"><el-button size="small" :icon="MagicStick">抽奖</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/tools`"><el-button size="small" :icon="Tools">工具</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/feedbacks`"><el-button size="small" :icon="ChatDotRound">反馈</el-button></RouterLink>
-            <RouterLink :to="`/admin/activities/${row.id}/stats`"><el-button size="small" :icon="DataAnalysis">统计</el-button></RouterLink>
-            <el-button size="small" type="danger" :icon="Delete" @click="remove(row.id)">删除</el-button>
+            <div class="table-actions action-cluster">
+              <RouterLink :to="`/admin/activities/${row.id}/edit`">
+                <el-button size="small" :icon="Edit">编辑</el-button>
+              </RouterLink>
+              <RouterLink :to="`/admin/activities/${row.id}/qrcodes`">
+                <el-button size="small" type="primary" :icon="Tickets">二维码</el-button>
+              </RouterLink>
+              <RouterLink :to="`/admin/activities/${row.id}/stats`">
+                <el-button size="small">统计</el-button>
+              </RouterLink>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="名单与工具" width="280" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions action-cluster">
+              <el-dropdown trigger="click" @command="(command) => handleCommand(command, row)">
+                <el-button size="small" :icon="MoreFilled">更多入口</el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="registrations">报名名单</el-dropdown-item>
+                    <el-dropdown-item command="checkins">签到名单</el-dropdown-item>
+                    <el-dropdown-item command="lottery">随机抽奖</el-dropdown-item>
+                    <el-dropdown-item command="tools">抽签分组</el-dropdown-item>
+                    <el-dropdown-item command="feedbacks">反馈统计</el-dropdown-item>
+                    <el-dropdown-item divided command="delete">删除活动</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="!loading && rows.length === 0" class="empty-wrap" description="暂无活动，请先创建活动" />
+
+      <div class="mobile-card-list">
+        <div v-for="row in managedRows" :key="row.id" class="panel manage-card agri-card">
+          <div class="manage-card-head">
+            <div>
+              <span class="wheat-badge">{{ row.campus || '全校区' }}</span>
+              <h3>{{ row.title }}</h3>
+              <p class="page-subtitle">{{ row.startTime || '时间待定' }}</p>
+            </div>
+            <el-tag :type="statusTagType(row.status)">{{ statusText(row.status) }}</el-tag>
+          </div>
+          <div class="button-row">
+            <RouterLink :to="`/admin/activities/${row.id}/edit`"><el-button size="small">编辑</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/qrcodes`"><el-button size="small" type="primary">二维码</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/registrations`"><el-button size="small">报名</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/checkins`"><el-button size="small">签到</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/lottery`"><el-button size="small">抽奖</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/tools`"><el-button size="small">分组</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/feedbacks`"><el-button size="small">反馈</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/stats`"><el-button size="small">统计</el-button></RouterLink>
+          </div>
+        </div>
+      </div>
+
+      <el-empty v-if="!loading && managedRows.length === 0" class="empty-wrap" description="暂无可管理活动，请先创建活动" />
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
-import { ChatDotRound, Checked, DataAnalysis, Delete, Edit, MagicStick, Plus, Tickets, Tools, User } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, MoreFilled, Plus, Tickets } from '@element-plus/icons-vue'
 import { deleteActivity, listActivities } from '../../api/activity'
-import { statusText } from '../../utils/options'
+import { listCheckins } from '../../api/checkin'
+import { listFeedbacks } from '../../api/feedback'
+import { listRegistrations } from '../../api/registration'
+import { useUserStore } from '../../stores/user'
+import { statusTagType, statusText } from '../../utils/options'
 
+const router = useRouter()
+const userStore = useUserStore()
 const rows = ref([])
 const loading = ref(false)
-const registeringCount = computed(() => rows.value.filter((item) => item.status === 'REGISTERING').length)
-const ongoingCount = computed(() => rows.value.filter((item) => item.status === 'ONGOING').length)
-const endedCount = computed(() => rows.value.filter((item) => item.status === 'ENDED').length)
+const overview = reactive({
+  registrationTotal: 0,
+  checkinTotal: 0,
+  feedbackTotal: 0
+})
+
+const managedRows = computed(() => {
+  if (userStore.role === 'admin') return rows.value
+  return rows.value.filter((item) => item.creatorId === userStore.userInfo?.id)
+})
+const activityIds = computed(() => managedRows.value.map((item) => item.id).filter(Boolean))
 
 async function load() {
   loading.value = true
   try {
     rows.value = await listActivities({})
+    await loadOverview()
   } finally {
     loading.value = false
   }
+}
+
+async function loadOverview() {
+  overview.registrationTotal = 0
+  overview.checkinTotal = 0
+  overview.feedbackTotal = 0
+  if (activityIds.value.length === 0) return
+
+  const [registrations, checkins, feedbacks] = await Promise.all([
+    sumListCount(listRegistrations),
+    sumListCount(listCheckins),
+    sumListCount(listFeedbacks)
+  ])
+  overview.registrationTotal = registrations
+  overview.checkinTotal = checkins
+  overview.feedbackTotal = feedbacks
+}
+
+async function sumListCount(fetcher) {
+  const results = await Promise.allSettled(activityIds.value.map((id) => fetcher(id)))
+  return results.reduce((total, item) => total + (item.status === 'fulfilled' ? item.value.length : 0), 0)
+}
+
+async function handleCommand(command, row) {
+  if (command === 'delete') {
+    await remove(row.id)
+    return
+  }
+  router.push(`/admin/activities/${row.id}/${command}`)
 }
 
 async function remove(id) {
@@ -73,17 +175,6 @@ async function remove(id) {
   await deleteActivity(id)
   ElMessage.success('已删除')
   load()
-}
-
-function statusTagType(status) {
-  const map = {
-    REGISTERING: 'success',
-    ONGOING: 'warning',
-    ENDED: 'info',
-    CANCELLED: 'danger',
-    DRAFT: ''
-  }
-  return map[status] || ''
 }
 
 onMounted(load)

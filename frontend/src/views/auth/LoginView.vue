@@ -5,7 +5,7 @@
         <span class="brand-mark">AC</span>
         <div>
           <h1>活动魔方</h1>
-          <p>登录后进入校园活动组织平台</p>
+          <p>登录后进入河南农业大学校园活动平台</p>
         </div>
       </div>
 
@@ -40,6 +40,7 @@ import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
+import { normalizeLoginTarget } from '../../utils/authSession'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,7 +58,7 @@ async function submit() {
   try {
     await userStore.login(form)
     ElMessage.success('登录成功')
-    router.push(route.query.redirect || '/activities')
+    router.push(normalizeLoginTarget(route.query.redirect))
   } finally {
     loading.value = false
   }

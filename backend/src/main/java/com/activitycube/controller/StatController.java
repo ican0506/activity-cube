@@ -3,6 +3,7 @@ package com.activitycube.controller;
 import com.activitycube.common.Result;
 import com.activitycube.service.ActivityService;
 import com.activitycube.service.StatService;
+import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.ActivityStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,11 +21,13 @@ public class StatController {
 
     @GetMapping("/api/activities/{id}/stats")
     public Result<ActivityStats> activityStats(@PathVariable Long id) {
+        activityService.requireManageableActivity(id, AuthUtil.requireUser());
         return Result.success(statService.activityStats(id));
     }
 
     @GetMapping("/api/admin/dashboard")
     public Result<Map<String, Object>> dashboard() {
+        AuthUtil.requireOrganizerOrAdmin(AuthUtil.requireUser());
         Map<String, Object> dashboard = new HashMap<>();
         dashboard.put("activityCount", activityService.list(null, null, null).size());
         dashboard.put("message", "活动魔方 MVP 数据概览");
