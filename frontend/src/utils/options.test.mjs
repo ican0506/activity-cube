@@ -33,6 +33,16 @@ test('registration disabled reasons are user friendly', () => {
   assert.equal(registerDisabledReason({ status: 'WAITING_START' }), '当前活动报名已结束')
 })
 
+test('blocks student actions while an activity is pending review or rejected', () => {
+  const now = new Date()
+  const started = new Date(now.getTime() - 60 * 1000).toISOString()
+  const later = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+
+  assert.equal(canCheckin({ status: 'PENDING_REVIEW', checkinStartTime: started, checkinEndTime: later }), false)
+  assert.equal(checkinDisabledReason({ status: 'PENDING_REVIEW' }), '活动正在审核中')
+  assert.equal(registerDisabledReason({ status: 'REJECTED' }), '活动审核未通过')
+})
+
 test('activity mode helpers default missing mode to offline', () => {
   assert.equal(isOnlineActivity({ activityMode: 'online' }), true)
   assert.equal(isOnlineActivity({ activityMode: 'offline' }), false)

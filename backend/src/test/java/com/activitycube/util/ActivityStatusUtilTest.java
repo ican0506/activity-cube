@@ -40,6 +40,17 @@ class ActivityStatusUtilTest {
                 .isEqualTo("ENDED");
     }
 
+    @Test
+    void keepsReviewStatesBeforeAnActivityIsPublished() {
+        LocalDateTime now = LocalDateTime.now();
+        assertThat(ActivityStatusUtil.calculateStatus(activity("PENDING_REVIEW",
+                now.minusHours(1), now.plusHours(1), now.plusHours(2), now.plusHours(3)), now))
+                .isEqualTo("PENDING_REVIEW");
+        assertThat(ActivityStatusUtil.calculateStatus(activity("REJECTED",
+                now.minusHours(1), now.plusHours(1), now.plusHours(2), now.plusHours(3)), now))
+                .isEqualTo("REJECTED");
+    }
+
     private Activity activity(String manualStatus) {
         return activity(manualStatus, now.minusHours(1), now.plusHours(1), now.plusHours(2), now.plusHours(3));
     }

@@ -3,6 +3,7 @@ package com.activitycube.controller;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.User;
+import com.activitycube.dto.ManualCheckinRequest;
 import com.activitycube.service.CheckinService;
 import com.activitycube.util.UserContext;
 import org.junit.jupiter.api.AfterEach;
@@ -54,5 +55,24 @@ class CheckinControllerTest {
 
         assertThat(response.getData()).containsExactly(registration);
         verify(checkinService).absences(1L, user);
+    }
+
+    @Test
+    void forwardsManualCheckinRequestToService() {
+        User user = new User();
+        user.setId(2L);
+        user.setRole("admin");
+        UserContext.set(user);
+        ManualCheckinRequest request = new ManualCheckinRequest();
+        request.setUserId(8L);
+        request.setRemark("手机没电");
+        Checkin checkin = new Checkin();
+        when(checkinService.manualCheckin(1L, request, user)).thenReturn(checkin);
+
+        var response = controller.manualCheckin(1L, request);
+
+        assertThat(response.getData()).isEqualTo(checkin);
+        assertThat(response.getMessage()).isEqualTo("补签成功");
+        verify(checkinService).manualCheckin(1L, request, user);
     }
 }
