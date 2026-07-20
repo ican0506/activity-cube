@@ -42,7 +42,7 @@
             <el-tooltip v-else-if="isOnlineActivity(detail.activity)" :content="checkinDisabledReason(detail.activity)" placement="top">
               <span><el-button :icon="Checked" disabled>去签到</el-button></span>
             </el-tooltip>
-            <span v-else class="offline-checkin-tip">线下活动需到现场扫码签到</span>
+            <span v-else class="offline-checkin-tip">线下活动需到现场扫描签到二维码</span>
 
             <RouterLink v-if="canFeedback(detail.activity)" :to="`/activities/${id}/feedback`">
               <el-button :icon="ChatDotRound">活动反馈</el-button>

@@ -12,11 +12,21 @@
 
     <el-alert
       class="qr-tip"
-      title="活动状态自动计算"
+      title="活动审核与状态"
       type="success"
       :closable="false"
       show-icon
-      description="发布后系统会根据报名时间、活动时间自动显示未开始、报名中、待开始、进行中、已结束；这里只保留草稿、发布、取消三个人工动作。"
+      description="新建活动先保存为草稿，再提交管理员审核。审核通过后才会在学生端展示，发布后的报名、进行和结束状态仍由系统按时间自动计算。"
+    />
+
+    <el-alert
+      v-if="reviewStatus === 'REJECTED'"
+      class="qr-tip"
+      title="活动审核未通过"
+      type="error"
+      :closable="false"
+      show-icon
+      :description="rejectReason || '请根据审核意见修改后重新提交。'"
     />
 
     <el-form :model="form" label-width="130px">
@@ -68,6 +78,7 @@
 
       <el-form-item label="当前展示状态" v-if="isEdit">
         <el-tag :type="statusTagType(displayStatus)">{{ statusText(displayStatus) }}</el-tag>
+        <el-tag class="review-status-tag" :type="statusTagType(reviewStatus)">{{ statusText(reviewStatus) }}</el-tag>
       </el-form-item>
 
       <el-form-item label="图片/视频">
@@ -97,9 +108,10 @@
 
       <el-form-item>
         <div class="button-row">
-          <el-button :loading="saving" @click="submit('DRAFT')">保存为草稿</el-button>
-          <el-button type="primary" :loading="saving" @click="submit('PUBLISHED')">发布活动</el-button>
-          <el-button v-if="isEdit" type="danger" plain :loading="saving" @click="submit('CANCELLED')">取消活动</el-button>
+          <el-button v-if="canEditDraft" :loading="saving" @click="saveDraft">{{ isEdit ? '保存修改' : '保存为草稿' }}</el-button>
+          <el-button v-if="canSubmitReview" type="primary" :loading="saving" @click="submitReview">提交审核</el-button>
+          <el-button v-if="isEdit && reviewStatus === 'PUBLISHED'" :loading="saving" @click="savePublishedChanges">保存修改</el-button>
+          <el-button v-if="isEdit && reviewStatus !== 'CANCELLED'" type="danger" plain :loading="saving" @click="cancelCurrentActivity">取消活动</el-button>
         </div>
       </el-form-item>
     </el-form>
@@ -110,7 +122,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createActivity, getActivity, updateActivity } from '../../api/activity'
+import { cancelActivity, createActivity, getActivity, submitActivityReview, updateActivity } from '../../api/activity'
 import { resolveFileUrl, uploadFile } from '../../api/file'
 import { listActivityMedia, saveActivityMedia } from '../../api/media'
 import { activityCampuses, activityModes, statusTagType, statusText } from '../../utils/options'
@@ -123,6 +135,10 @@ const coverFileList = ref([])
 const mediaFileList = ref([])
 const mediaItems = ref([])
 const displayStatus = ref('DRAFT')
+const reviewStatus = ref('DRAFT')
+const rejectReason = ref('')
+const canEditDraft = computed(() => !isEdit.value || ['DRAFT', 'REJECTED'].includes(reviewStatus.value))
+const canSubmitReview = computed(() => !isEdit.value || ['DRAFT', 'REJECTED'].includes(reviewStatus.value))
 const form = reactive({
   title: '',
   description: '',
@@ -138,7 +154,7 @@ const form = reactive({
   checkinEndTime: '2026-07-20T16:15:00',
   maxParticipants: 120,
   allowCrossCampus: true,
-  status: 'PUBLISHED'
+  status: 'DRAFT'
 })
 
 onMounted(async () => {
@@ -147,9 +163,9 @@ onMounted(async () => {
     Object.assign(form, detail.activity)
     form.activityMode = detail.activity.activityMode || 'offline'
     displayStatus.value = detail.activity.status
-    form.status = detail.activity.status === 'DRAFT' || detail.activity.status === 'CANCELLED'
-      ? detail.activity.status
-      : 'PUBLISHED'
+    reviewStatus.value = detail.activity.reviewStatus || detail.activity.status
+    rejectReason.value = detail.activity.rejectReason || ''
+    form.status = reviewStatus.value
     if (!form.checkinStartTime) form.checkinStartTime = form.startTime
     if (!form.checkinEndTime) form.checkinEndTime = form.endTime
     if (form.coverUrl) {
@@ -160,18 +176,58 @@ onMounted(async () => {
   }
 })
 
-async function submit(status) {
+async function persistActivity() {
+  form.status = reviewStatus.value || 'DRAFT'
+  return isEdit.value
+    ? updateActivity(route.params.id, form)
+    : createActivity(form)
+}
+
+async function saveDraft() {
   saving.value = true
   try {
-    form.status = status
-    const activity = isEdit.value
-      ? await updateActivity(route.params.id, form)
-      : await createActivity(form)
+    const activity = await persistActivity()
     await saveActivityMedia(activity.id, mediaItems.value.map((item, index) => ({
       ...item,
       sortOrder: index + 1
     })))
-    ElMessage.success(status === 'DRAFT' ? '草稿已保存' : status === 'CANCELLED' ? '活动已取消' : '活动已发布')
+    ElMessage.success(isEdit.value ? '活动修改已保存' : '草稿已保存')
+    router.push('/admin/activities')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function submitReview() {
+  saving.value = true
+  try {
+    const activity = await persistActivity()
+    await saveActivityMedia(activity.id, mediaItems.value.map((item, index) => ({ ...item, sortOrder: index + 1 })))
+    await submitActivityReview(activity.id)
+    ElMessage.success('活动已提交审核，请等待管理员处理')
+    router.push('/admin/activities')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function savePublishedChanges() {
+  saving.value = true
+  try {
+    const activity = await persistActivity()
+    await saveActivityMedia(activity.id, mediaItems.value.map((item, index) => ({ ...item, sortOrder: index + 1 })))
+    ElMessage.success('活动修改已保存')
+    router.push('/admin/activities')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function cancelCurrentActivity() {
+  saving.value = true
+  try {
+    await cancelActivity(route.params.id)
+    ElMessage.success('活动已取消')
     router.push('/admin/activities')
   } finally {
     saving.value = false
@@ -276,3 +332,9 @@ function toUploadFile(item) {
   }
 }
 </script>
+
+<style scoped>
+.review-status-tag {
+  margin-left: 8px;
+}
+</style>

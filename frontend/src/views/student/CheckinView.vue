@@ -4,7 +4,7 @@
       <div>
         <div class="motto-badge">扫码签到 · 有序参与</div>
         <h1>活动签到</h1>
-        <p>签到入口仅用于活动现场。后端会校验报名记录、重复签到和签到时间。</p>
+        <p>扫码后先确认活动信息，再点击确认签到。后端会校验报名记录、重复签到和签到时间。</p>
       </div>
       <div v-if="activity" class="hero-card">
         <span>{{ statusText(activity.status) }}</span>
@@ -38,7 +38,13 @@
         :closable="false"
         show-icon
       />
-      <el-result icon="success" title="扫码签到入口" sub-title="确认后将写入签到记录，重复签到会被后端拦截。">
+      <div v-if="activity" class="info-list scan-checkin-info">
+        <div class="info-card"><span>活动名称</span><strong>{{ activity.title }}</strong></div>
+        <div class="info-card"><span>校区</span><strong>{{ activity.campus }}</strong></div>
+        <div class="info-card"><span>地点</span><strong>{{ activity.location || '地点待定' }}</strong></div>
+        <div class="info-card"><span>签到时间</span><strong>{{ activity.checkinStartTime || activity.startTime }} 至 {{ activity.checkinEndTime || activity.endTime }}</strong></div>
+      </div>
+      <el-result icon="success" title="签到确认" sub-title="确认无误后点击按钮，系统才会写入签到记录。">
         <template #extra>
           <el-button type="primary" :disabled="checked || (activity && (!canCheckin(activity) || (!isOnlineActivity(activity) && !checkinCode)))" :loading="submitting" @click="submit">确认签到</el-button>
           <RouterLink :to="`/activities/${route.params.id}`">

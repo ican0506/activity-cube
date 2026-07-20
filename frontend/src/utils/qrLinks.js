@@ -1,12 +1,15 @@
 export function buildActivityQrLinks(origin, activityId, options = {}) {
   const base = String(origin || '').replace(/\/+$/, '')
+  if (!activityId) {
+    return { registerUrl: '', checkinUrl: '' }
+  }
   const id = encodeURIComponent(String(activityId))
-  const code = options.checkinCode
-    ? `?code=${encodeURIComponent(String(options.checkinCode))}`
-    : ''
+  const checkinCode = String(options.checkinCode || '').trim()
 
   return {
-    registerUrl: `${base}/activities/${id}/register`,
-    checkinUrl: `${base}/activities/${id}/checkin${code}`
+    registerUrl: `${base}/scan/resolve?type=register&activityId=${id}`,
+    checkinUrl: checkinCode
+      ? `${base}/scan/resolve?type=checkin&activityId=${id}&code=${encodeURIComponent(checkinCode)}`
+      : ''
   }
 }

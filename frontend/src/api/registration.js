@@ -11,3 +11,7 @@ export function listRegistrations(id) {
 export function myRegistrations() {
   return request.get('/my/registrations')
 }
+
+export function cancelMyRegistration(id) {
+  return request.delete(`/activities/${id}/registrations/me`)
+}

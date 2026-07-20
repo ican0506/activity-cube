@@ -10,8 +10,8 @@
       </div>
 
       <el-form :model="form" label-position="top" @submit.prevent>
-        <el-form-item label="账号">
-          <el-input v-model="form.username" placeholder="student001 / organizer001 / admin" size="large" />
+        <el-form-item label="账号 / 学号 / 工号">
+          <el-input v-model="form.username" placeholder="学生请输入学号，负责人/管理员请输入账号或工号" size="large" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password" type="password" show-password size="large" />
@@ -22,8 +22,8 @@
       </el-form>
 
       <div class="quick-login">
-        <el-button @click="fill('student001')">学生账号</el-button>
-        <el-button @click="fill('organizer001')">负责人账号</el-button>
+        <el-button @click="fill('2321241389')">学生账号</el-button>
+        <el-button @click="fill('T2024001')">负责人工号</el-button>
         <el-button @click="fill('admin')">管理员账号</el-button>
       </div>
 
@@ -40,13 +40,13 @@ import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
-import { normalizeLoginTarget } from '../../utils/authSession'
+import { defaultTargetForRole, normalizeLoginTarget } from '../../utils/authSession'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-const form = reactive({ username: 'organizer001', password: '123456' })
+const form = reactive({ username: '', password: '123456' })
 
 function fill(username) {
   form.username = username
@@ -58,7 +58,7 @@ async function submit() {
   try {
     await userStore.login(form)
     ElMessage.success('登录成功')
-    router.push(normalizeLoginTarget(route.query.redirect))
+    router.push(normalizeLoginTarget(route.query.redirect, defaultTargetForRole(userStore.role)))
   } finally {
     loading.value = false
   }

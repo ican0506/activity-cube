@@ -85,6 +85,7 @@ import { listAbsentees } from '../../api/checkin'
 import { getFeedbackStats } from '../../api/feedback'
 import { getActivityStats } from '../../api/stat'
 import { exportRosterExcel } from '../../utils/excelExport'
+import { recordFrontendExport } from '../../api/export'
 
 const route = useRoute()
 const stats = ref({})
@@ -162,6 +163,7 @@ async function downloadAbsentees() {
     suffix: '未签到名单',
     registrations: absentees
   })
+  await recordFrontendExport(route.params.id, 'absences')
   ElMessage.success('未签到名单已导出')
 }
 

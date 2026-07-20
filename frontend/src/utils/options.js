@@ -5,7 +5,7 @@ export const activityModes = [
   { label: '线下活动', value: 'offline' },
   { label: '线上活动', value: 'online' }
 ]
-export const statuses = ['全部', 'DRAFT', 'NOT_STARTED', 'REGISTERING', 'WAITING_START', 'ONGOING', 'ENDED', 'CANCELLED']
+export const statuses = ['全部', 'DRAFT', 'PENDING_REVIEW', 'REJECTED', 'NOT_STARTED', 'REGISTERING', 'WAITING_START', 'ONGOING', 'ENDED', 'CANCELLED']
 export const userRoleOptions = [
   { label: '全部', value: '' },
   { label: '学生', value: 'student' },
@@ -21,6 +21,8 @@ export const userStatusOptions = [
 export function statusText(status) {
   const map = {
     DRAFT: '草稿',
+    PENDING_REVIEW: '待审核',
+    REJECTED: '已驳回',
     PUBLISHED: '已发布',
     NOT_STARTED: '未开始',
     REGISTERING: '报名中',
@@ -35,6 +37,9 @@ export function statusText(status) {
 export function statusTagType(status) {
   const map = {
     DRAFT: 'info',
+    PENDING_REVIEW: 'warning',
+    REJECTED: 'danger',
+    PUBLISHED: 'success',
     NOT_STARTED: 'primary',
     REGISTERING: 'success',
     WAITING_START: 'warning',
@@ -53,6 +58,8 @@ export function registerDisabledReason(activity) {
   const status = activity?.status
   const map = {
     DRAFT: '当前活动尚未发布',
+    PENDING_REVIEW: '活动正在审核中',
+    REJECTED: '活动审核未通过',
     NOT_STARTED: '当前活动未开始报名',
     WAITING_START: '当前活动报名已结束',
     ONGOING: '活动已开始，报名已结束',
@@ -70,6 +77,8 @@ export function canCheckin(activity) {
   return now >= start
     && now <= end
     && activity?.status !== 'DRAFT'
+    && activity?.status !== 'PENDING_REVIEW'
+    && activity?.status !== 'REJECTED'
     && activity?.status !== 'CANCELLED'
     && activity?.status !== 'ENDED'
 }
@@ -84,6 +93,8 @@ export function activityModeText(activity) {
 
 export function checkinDisabledReason(activity) {
   if (activity?.status === 'DRAFT') return '当前活动尚未发布'
+  if (activity?.status === 'PENDING_REVIEW') return '活动正在审核中'
+  if (activity?.status === 'REJECTED') return '活动审核未通过'
   if (activity?.status === 'CANCELLED') return '当前活动已取消'
   if (activity?.status === 'ENDED') return '当前活动已结束'
   const now = new Date()
@@ -100,6 +111,8 @@ export function canFeedback(activity) {
 
 export function feedbackDisabledReason(activity) {
   if (activity?.status === 'DRAFT') return '当前活动尚未发布'
+  if (activity?.status === 'PENDING_REVIEW') return '活动正在审核中'
+  if (activity?.status === 'REJECTED') return '活动审核未通过'
   if (activity?.status === 'CANCELLED') return '当前活动已取消'
   return '活动结束后才可以提交反馈'
 }

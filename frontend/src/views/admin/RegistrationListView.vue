@@ -40,6 +40,7 @@ import { ElMessage } from 'element-plus'
 import { getActivity } from '../../api/activity'
 import { listRegistrations } from '../../api/registration'
 import { exportRosterExcel } from '../../utils/excelExport'
+import { recordFrontendExport } from '../../api/export'
 
 const route = useRoute()
 const rows = ref([])
@@ -50,12 +51,13 @@ function campusCount(campus) {
   return rows.value.filter((item) => item.campus === campus).length
 }
 
-function download() {
+async function download() {
   exportRosterExcel({
     activityName: activity.value?.title,
     suffix: '报名名单',
     registrations: rows.value
   })
+  await recordFrontendExport(route.params.id, 'registrations')
   ElMessage.success('报名名单已导出')
 }
 

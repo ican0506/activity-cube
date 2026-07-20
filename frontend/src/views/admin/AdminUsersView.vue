@@ -18,7 +18,7 @@
 
     <div class="panel filter-panel">
       <div class="toolbar">
-        <el-input v-model="filter.keyword" clearable placeholder="搜索用户名、姓名、学号/工号、手机号" />
+        <el-input v-model="filter.keyword" clearable placeholder="搜索账号、姓名、学号、工号、手机号" />
         <el-select v-model="filter.role" placeholder="角色">
           <el-option v-for="item in userRoleOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
@@ -46,7 +46,18 @@
         <el-table-column prop="id" label="用户ID" width="90" />
         <el-table-column prop="username" label="用户名" min-width="130" />
         <el-table-column prop="realName" label="姓名" min-width="110" />
-        <el-table-column prop="studentNo" label="学号/工号" min-width="130" />
+        <el-table-column prop="studentNo" label="学号" min-width="130">
+          <template #default="{ row }">{{ row.studentNo || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="workNo" label="工号" min-width="120">
+          <template #default="{ row }">{{ row.workNo || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="gradeYear" label="年级" min-width="90">
+          <template #default="{ row }">{{ row.gradeYear || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="majorName" label="专业" min-width="150">
+          <template #default="{ row }">{{ row.majorName || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="phone" label="手机号" min-width="130" />
         <el-table-column prop="campus" label="校区" min-width="120" />
         <el-table-column prop="college" label="学院/部门" min-width="150" />
@@ -80,7 +91,7 @@
             <div>
               <span class="wheat-badge">{{ row.campus || '未填写校区' }}</span>
               <h3>{{ row.realName || row.username }}</h3>
-              <p class="page-subtitle">{{ row.username }} · {{ row.studentNo || '无学号/工号' }}</p>
+              <p class="page-subtitle">{{ row.username }} · {{ row.studentNo || row.workNo || '无学号/工号' }}</p>
             </div>
             <el-tag :type="userRoleTagType(row.role)">{{ userRoleText(row.role) }}</el-tag>
           </div>
@@ -114,10 +125,9 @@
 
     <el-dialog v-model="organizerDialogVisible" title="创建负责人账号" width="520px">
       <el-form :model="organizerForm" label-width="100px">
-        <el-form-item label="用户名"><el-input v-model="organizerForm.username" /></el-form-item>
-        <el-form-item label="初始密码"><el-input v-model="organizerForm.password" type="password" show-password /></el-form-item>
         <el-form-item label="姓名"><el-input v-model="organizerForm.realName" /></el-form-item>
-        <el-form-item label="工号/学号"><el-input v-model="organizerForm.studentNo" /></el-form-item>
+        <el-form-item label="工号"><el-input v-model="organizerForm.workNo" placeholder="例如 T2024001，创建后作为登录账号" /></el-form-item>
+        <el-form-item label="初始密码"><el-input v-model="organizerForm.password" type="password" show-password /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="organizerForm.phone" /></el-form-item>
         <el-form-item label="校区">
           <el-select v-model="organizerForm.campus">
@@ -135,7 +145,10 @@
     <el-dialog v-model="editDialogVisible" title="编辑用户" width="520px">
       <el-form :model="editForm" label-width="100px">
         <el-form-item label="姓名"><el-input v-model="editForm.realName" /></el-form-item>
-        <el-form-item label="学号/工号"><el-input v-model="editForm.studentNo" /></el-form-item>
+        <el-form-item label="学号"><el-input v-model="editForm.studentNo" /></el-form-item>
+        <el-form-item label="工号"><el-input v-model="editForm.workNo" /></el-form-item>
+        <el-form-item label="专业"><el-input v-model="editForm.majorName" /></el-form-item>
+        <el-form-item label="班级"><el-input v-model="editForm.className" /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="editForm.phone" /></el-form-item>
         <el-form-item label="校区">
           <el-select v-model="editForm.campus">
@@ -262,6 +275,10 @@ function openCreateOrganizer() {
 }
 
 async function submitOrganizer() {
+  if (!organizerForm.realName || !organizerForm.workNo || !organizerForm.password || !organizerForm.campus) {
+    ElMessage.warning('请填写负责人姓名、工号、初始密码和校区')
+    return
+  }
   saving.value = true
   try {
     await createOrganizer(organizerForm)
@@ -278,6 +295,11 @@ function openEdit(row) {
   Object.assign(editForm, {
     realName: row.realName || '',
     studentNo: row.studentNo || '',
+    workNo: row.workNo || '',
+    gradeYear: row.gradeYear || '',
+    majorCode: row.majorCode || '',
+    majorName: row.majorName || '',
+    className: row.className || '',
     phone: row.phone || '',
     campus: row.campus || '龙子湖校区',
     college: row.college || '',
@@ -325,10 +347,9 @@ async function submitResetPassword() {
 
 function emptyOrganizerForm() {
   return {
-    username: '',
     password: '',
     realName: '',
-    studentNo: '',
+    workNo: '',
     phone: '',
     campus: '龙子湖校区',
     college: ''
@@ -339,6 +360,11 @@ function emptyEditForm() {
   return {
     realName: '',
     studentNo: '',
+    workNo: '',
+    gradeYear: '',
+    majorCode: '',
+    majorName: '',
+    className: '',
     phone: '',
     campus: '龙子湖校区',
     college: '',

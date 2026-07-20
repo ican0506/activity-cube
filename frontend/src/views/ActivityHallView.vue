@@ -13,6 +13,9 @@
         </div>
         <div class="hero-actions">
           <el-button class="hero-button" :icon="Refresh" @click="load">刷新活动</el-button>
+          <RouterLink to="/scan">
+            <el-button class="hero-button" :icon="Camera">扫一扫</el-button>
+          </RouterLink>
         </div>
       </div>
       <div class="hero-card">
@@ -62,7 +65,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Camera, Refresh, Search } from '@element-plus/icons-vue'
 import ActivityCard from '../components/ActivityCard.vue'
 import { listActivities } from '../api/activity'
 import { statuses, statusText } from '../utils/options'
