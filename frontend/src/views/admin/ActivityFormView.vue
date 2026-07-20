@@ -32,6 +32,11 @@
     <el-form :model="form" label-width="130px">
       <el-form-item label="活动名称"><el-input v-model="form.title" placeholder="例如：校园志愿服务招募" /></el-form-item>
       <el-form-item label="活动介绍"><el-input v-model="form.description" type="textarea" :rows="4" /></el-form-item>
+      <el-form-item label="活动类型">
+        <el-select v-model="form.activityCategory">
+          <el-option v-for="item in activityCategories" :key="item" :label="item" :value="item" />
+        </el-select>
+      </el-form-item>
 
       <el-form-item label="活动封面">
         <div class="upload-block">
@@ -64,7 +69,7 @@
             {{ item.label }}
           </el-radio-button>
         </el-radio-group>
-        <p class="upload-tip">线上活动允许学生在详情页直接签到；线下活动需现场扫码签到。</p>
+        <p class="upload-tip">线上活动允许学生在详情页直接签到；线下和混合活动需现场扫码签到。</p>
       </el-form-item>
       <el-form-item label="活动地点"><el-input v-model="form.location" /></el-form-item>
       <el-form-item label="活动开始"><el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" /></el-form-item>
@@ -75,6 +80,25 @@
       <el-form-item label="签到结束"><el-date-picker v-model="form.checkinEndTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" /></el-form-item>
       <el-form-item label="最大报名人数"><el-input-number v-model="form.maxParticipants" :min="1" /></el-form-item>
       <el-form-item label="允许跨校区"><el-switch v-model="form.allowCrossCampus" /></el-form-item>
+      <el-form-item label="设置奖励">
+        <el-switch v-model="form.rewardEnabled" active-text="设置奖励" inactive-text="无奖励" />
+      </el-form-item>
+      <template v-if="form.rewardEnabled">
+        <el-form-item label="奖励类型">
+          <el-select v-model="form.rewardType">
+            <el-option v-for="item in rewardTypes" :key="item" :label="item" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="form.rewardType === '课外学时'" label="课外学时">
+          <el-input-number v-model="form.rewardHours" :min="0" :precision="1" :step="0.5" />
+        </el-form-item>
+        <el-form-item v-if="form.rewardType === '积分'" label="积分数量">
+          <el-input-number v-model="form.rewardPoints" :min="0" />
+        </el-form-item>
+        <el-form-item label="奖励说明">
+          <el-input v-model="form.rewardDescription" type="textarea" :rows="2" placeholder="例如：完成签到后获得 2 课外学时。" />
+        </el-form-item>
+      </template>
 
       <el-form-item label="当前展示状态" v-if="isEdit">
         <el-tag :type="statusTagType(displayStatus)">{{ statusText(displayStatus) }}</el-tag>
@@ -125,7 +149,7 @@ import { ElMessage } from 'element-plus'
 import { cancelActivity, createActivity, getActivity, submitActivityReview, updateActivity } from '../../api/activity'
 import { resolveFileUrl, uploadFile } from '../../api/file'
 import { listActivityMedia, saveActivityMedia } from '../../api/media'
-import { activityCampuses, activityModes, statusTagType, statusText } from '../../utils/options'
+import { activityCampuses, activityCategories, activityModes, rewardTypes, statusTagType, statusText } from '../../utils/options'
 
 const route = useRoute()
 const router = useRouter()
@@ -144,6 +168,7 @@ const form = reactive({
   description: '',
   coverUrl: '',
   activityMode: 'offline',
+  activityCategory: '其他',
   campus: '龙子湖校区',
   location: '',
   startTime: '2026-07-20T14:00:00',
@@ -154,6 +179,11 @@ const form = reactive({
   checkinEndTime: '2026-07-20T16:15:00',
   maxParticipants: 120,
   allowCrossCampus: true,
+  rewardEnabled: false,
+  rewardType: '无',
+  rewardHours: 0,
+  rewardPoints: 0,
+  rewardDescription: '',
   status: 'DRAFT'
 })
 
@@ -162,6 +192,12 @@ onMounted(async () => {
     const detail = await getActivity(route.params.id)
     Object.assign(form, detail.activity)
     form.activityMode = detail.activity.activityMode || 'offline'
+    form.activityCategory = detail.activity.activityCategory || '其他'
+    form.rewardEnabled = Boolean(detail.activity.rewardEnabled)
+    form.rewardType = detail.activity.rewardType || '无'
+    form.rewardHours = detail.activity.rewardHours || 0
+    form.rewardPoints = detail.activity.rewardPoints || 0
+    form.rewardDescription = detail.activity.rewardDescription || ''
     displayStatus.value = detail.activity.status
     reviewStatus.value = detail.activity.reviewStatus || detail.activity.status
     rejectReason.value = detail.activity.rejectReason || ''

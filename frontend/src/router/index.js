@@ -9,6 +9,7 @@ const routes = [
   { path: '/scan', component: () => import('../views/scan/ScanView.vue'), meta: { requiresAuth: true } },
   { path: '/scan/resolve', component: () => import('../views/scan/ScanResolveView.vue') },
   { path: '/activities', component: () => import('../views/ActivityHallView.vue'), meta: { requiresAuth: true } },
+  { path: '/activities/ended', component: () => import('../views/student/EndedActivitiesView.vue'), meta: { requiresAuth: true } },
   { path: '/activities/:id', component: () => import('../views/ActivityDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/activities/:id/register', component: () => import('../views/student/RegisterView.vue'), meta: { requiresAuth: true } },
   { path: '/activities/:id/checkin', component: () => import('../views/student/CheckinView.vue'), meta: { requiresAuth: true } },
@@ -16,6 +17,9 @@ const routes = [
   { path: '/messages', component: () => import('../views/student/MessagesView.vue'), meta: { requiresAuth: true } },
   { path: '/my/registrations', component: () => import('../views/student/MyRegistrationsView.vue'), meta: { requiresAuth: true } },
   { path: '/my/checkins', component: () => import('../views/student/MyCheckinsView.vue'), meta: { requiresAuth: true } },
+  { path: '/profile', component: () => import('../views/student/ProfileView.vue'), meta: { requiresAuth: true, requiresStudent: true } },
+  { path: '/student/profile', component: () => import('../views/student/ProfileView.vue'), meta: { requiresAuth: true, requiresStudent: true } },
+  { path: '/profile/security', component: () => import('../views/student/ProfileSecurityView.vue'), meta: { requiresAuth: true, requiresStudent: true } },
   { path: '/admin/dashboard', component: () => import('../views/admin/DashboardView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activity-reviews', component: () => import('../views/admin/ActivityReviewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/operation-logs', component: () => import('../views/admin/OperationLogView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
@@ -46,6 +50,9 @@ router.beforeEach((to) => {
   }
   if (to.meta.requiresAuth && !userStore.isLogin) {
     return buildLoginRedirect(to.path, to.fullPath.slice(to.path.length))
+  }
+  if (to.meta.requiresStudent && !['student', 'user'].includes(userStore.role)) {
+    return defaultTargetForRole(userStore.role)
   }
   if (to.meta.requiresManager && !userStore.canManage) {
     return '/activities'

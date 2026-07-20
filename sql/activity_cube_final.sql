@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号，学生默认等于学号，负责人默认等于工号',
   `password` VARCHAR(100) NOT NULL COMMENT 'BCrypt加密后的登录密码',
   `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+  `avatar_url` VARCHAR(500) DEFAULT NULL COMMENT '头像URL',
   `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学生学号',
   `work_no` VARCHAR(50) DEFAULT NULL COMMENT '负责人工号',
   `grade_year` VARCHAR(20) DEFAULT NULL COMMENT '年级，例如2023级',
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `class_name` VARCHAR(100) DEFAULT NULL COMMENT '班级',
   `major_class` VARCHAR(100) DEFAULT NULL COMMENT '兼容旧字段：专业班级',
   `phone` VARCHAR(30) DEFAULT NULL COMMENT '手机号',
+  `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '账号状态：1启用，0禁用',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `description` TEXT NOT NULL COMMENT '活动介绍',
   `cover_url` VARCHAR(500) DEFAULT NULL COMMENT '活动封面图URL',
   `activity_mode` VARCHAR(20) NOT NULL DEFAULT 'offline' COMMENT '活动形式：online线上活动/offline线下活动',
+  `activity_category` VARCHAR(50) NOT NULL DEFAULT '其他' COMMENT '活动类型',
   `checkin_code` VARCHAR(64) DEFAULT NULL COMMENT '签到码：线下活动现场扫码签到校验使用',
   `campus` VARCHAR(50) NOT NULL COMMENT '活动校区：全校区/龙子湖校区/文化路校区/许昌校区/线上',
   `location` VARCHAR(200) NOT NULL COMMENT '活动地点',
@@ -55,6 +58,11 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `checkin_end_time` DATETIME NOT NULL COMMENT '签到结束时间',
   `max_participants` INT DEFAULT NULL COMMENT '最大报名人数，空表示不限人数',
   `allow_cross_campus` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许跨校区报名：1允许，0不允许',
+  `reward_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT '是否设置奖励：1是/0否',
+  `reward_type` VARCHAR(30) NOT NULL DEFAULT '无' COMMENT '奖励类型：课外学时/积分/证书/实物奖励/无',
+  `reward_hours` DECIMAL(5,1) NOT NULL DEFAULT 0.0 COMMENT '课外学时数量',
+  `reward_points` INT NOT NULL DEFAULT 0 COMMENT '积分数量',
+  `reward_description` VARCHAR(500) DEFAULT NULL COMMENT '奖励说明',
   `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT' COMMENT '活动工作流状态：DRAFT草稿/PENDING_REVIEW待审核/REJECTED已驳回/PUBLISHED已发布/CANCELLED已取消；展示状态由后端按时间计算',
   `reject_reason` VARCHAR(500) DEFAULT NULL COMMENT '活动驳回原因',
   `creator_id` BIGINT NOT NULL COMMENT '创建人用户ID',
@@ -66,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
   KEY `idx_activity_start_time` (`start_time`),
   KEY `idx_activity_checkin_code` (`checkin_code`),
   CONSTRAINT `fk_activity_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`),
-  CONSTRAINT `chk_activity_mode` CHECK (`activity_mode` IN ('online', 'offline')),
+  CONSTRAINT `chk_activity_mode` CHECK (`activity_mode` IN ('online', 'offline', 'hybrid')),
   CONSTRAINT `chk_activity_campus` CHECK (`campus` IN ('全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上')),
   CONSTRAINT `chk_activity_workflow_status` CHECK (`status` IN ('DRAFT', 'PENDING_REVIEW', 'REJECTED', 'PUBLISHED', 'CANCELLED')),
   CONSTRAINT `chk_activity_max_participants` CHECK (`max_participants` IS NULL OR `max_participants` > 0),
@@ -201,6 +209,30 @@ CREATE TABLE IF NOT EXISTS `lottery_result` (
   CONSTRAINT `chk_lottery_round_no` CHECK (`round_no` > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='随机抽奖结果表';
 
+CREATE TABLE IF NOT EXISTS `student_activity_reward` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '奖励记录ID',
+  `activity_id` BIGINT NOT NULL COMMENT '活动ID',
+  `student_id` BIGINT NOT NULL COMMENT '学生用户ID',
+  `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学号',
+  `activity_category` VARCHAR(50) DEFAULT NULL COMMENT '活动类型',
+  `reward_type` VARCHAR(30) NOT NULL COMMENT '奖励类型',
+  `reward_hours` DECIMAL(5,1) NOT NULL DEFAULT 0.0 COMMENT '课外学时数量',
+  `reward_points` INT NOT NULL DEFAULT 0 COMMENT '积分数量',
+  `reward_description` VARCHAR(500) DEFAULT NULL COMMENT '奖励说明',
+  `issued_by` BIGINT NOT NULL COMMENT '发放操作人ID',
+  `issued_by_name` VARCHAR(100) DEFAULT NULL COMMENT '发放操作人姓名',
+  `issued_time` DATETIME NOT NULL COMMENT '发放时间',
+  `status` VARCHAR(20) NOT NULL DEFAULT 'issued' COMMENT '发放状态',
+  `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_student_activity_reward` (`activity_id`, `student_id`),
+  KEY `idx_reward_student` (`student_id`),
+  KEY `idx_reward_activity` (`activity_id`),
+  CONSTRAINT `fk_reward_activity` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reward_student` FOREIGN KEY (`student_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生活动奖励记录表';
+
 CREATE TABLE IF NOT EXISTS `operation_log` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '操作日志ID',
   `user_id` BIGINT NOT NULL COMMENT '操作人用户ID',
@@ -258,10 +290,10 @@ VALUES
 ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `status` = 1, `update_time` = NOW();
 
 INSERT INTO `activity`
-(`id`, `title`, `description`, `activity_mode`, `checkin_code`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `checkin_start_time`, `checkin_end_time`, `max_participants`, `allow_cross_campus`, `status`, `creator_id`)
+(`id`, `title`, `description`, `activity_mode`, `activity_category`, `checkin_code`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `checkin_start_time`, `checkin_end_time`, `max_participants`, `allow_cross_campus`, `reward_enabled`, `reward_type`, `reward_hours`, `reward_points`, `reward_description`, `status`, `creator_id`)
 VALUES
-(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', 'offline', REPLACE(UUID(), '-', ''), '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-21 14:00:00', '2026-07-21 16:00:00', '2026-07-15 08:00:00', '2026-07-21 12:00:00', '2026-07-21 13:30:00', '2026-07-21 16:30:00', 120, 0, 'PUBLISHED', 2),
-(2, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', 'online', REPLACE(UUID(), '-', ''), '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', '2026-07-25 18:45:00', '2026-07-25 21:00:00', 500, 1, 'PUBLISHED', 2)
+(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', 'offline', '文体活动', REPLACE(UUID(), '-', ''), '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-21 14:00:00', '2026-07-21 16:00:00', '2026-07-15 08:00:00', '2026-07-21 12:00:00', '2026-07-21 13:30:00', '2026-07-21 16:30:00', 120, 0, 1, '课外学时', 2.0, 0, '完成签到后获得 2 课外学时', 'PUBLISHED', 2),
+(2, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', 'online', '讲座培训', REPLACE(UUID(), '-', ''), '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', '2026-07-25 18:45:00', '2026-07-25 21:00:00', 500, 1, 0, '无', 0.0, 0, NULL, 'PUBLISHED', 2)
 ON DUPLICATE KEY UPDATE `update_time` = NOW();
 
 INSERT INTO `registration`

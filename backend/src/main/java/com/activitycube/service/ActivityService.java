@@ -31,6 +31,7 @@ import java.util.UUID;
 public class ActivityService {
     public static final String MODE_ONLINE = "online";
     public static final String MODE_OFFLINE = "offline";
+    public static final String MODE_HYBRID = "hybrid";
 
     private final ActivityMapper activityMapper;
     private final RegistrationMapper registrationMapper;
@@ -82,6 +83,7 @@ public class ActivityService {
         BeanUtils.copyProperties(request, activity);
         activity.setStatus(ActivityStatusUtil.DRAFT);
         activity.setActivityMode(normalizeActivityMode(request.getActivityMode()));
+        applyActivityDefaults(activity);
         activity.setCreatorId(creator.getId());
         activity.setCreatedAt(LocalDateTime.now());
         activity.setUpdatedAt(LocalDateTime.now());
@@ -102,6 +104,7 @@ public class ActivityService {
         BeanUtils.copyProperties(request, activity);
         activity.setStatus(workflowStatus);
         activity.setActivityMode(normalizeActivityMode(request.getActivityMode()));
+        applyActivityDefaults(activity);
         activity.setUpdatedAt(LocalDateTime.now());
         activityMapper.updateById(activity);
         applyResponseDefaults(activity);
@@ -242,7 +245,13 @@ public class ActivityService {
     }
 
     private String normalizeActivityMode(String activityMode) {
-        return MODE_ONLINE.equalsIgnoreCase(activityMode) ? MODE_ONLINE : MODE_OFFLINE;
+        if (MODE_ONLINE.equalsIgnoreCase(activityMode)) {
+            return MODE_ONLINE;
+        }
+        if (MODE_HYBRID.equalsIgnoreCase(activityMode)) {
+            return MODE_HYBRID;
+        }
+        return MODE_OFFLINE;
     }
 
     private void ensureCheckinCodeIfPublished(Activity activity) {
@@ -257,12 +266,21 @@ public class ActivityService {
     private void applyResponseDefaults(Activity activity) {
         activity.setReviewStatus(activity.getStatus());
         ActivityStatusUtil.applyCalculatedStatus(activity);
-        applyActivityModeDefault(activity);
+        applyActivityDefaults(activity);
     }
 
-    private void applyActivityModeDefault(Activity activity) {
+    private void applyActivityDefaults(Activity activity) {
         if (!StringUtils.hasText(activity.getActivityMode())) {
             activity.setActivityMode(MODE_OFFLINE);
+        }
+        if (!StringUtils.hasText(activity.getActivityCategory())) {
+            activity.setActivityCategory("其他");
+        }
+        if (activity.getRewardEnabled() == null) {
+            activity.setRewardEnabled(false);
+        }
+        if (!StringUtils.hasText(activity.getRewardType())) {
+            activity.setRewardType("无");
         }
     }
 

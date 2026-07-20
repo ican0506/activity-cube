@@ -75,6 +75,7 @@
                     <el-dropdown-item command="notices">活动通知</el-dropdown-item>
                     <el-dropdown-item command="lottery">随机抽奖</el-dropdown-item>
                     <el-dropdown-item command="tools">抽签分组</el-dropdown-item>
+                    <el-dropdown-item command="rewards">发放奖励</el-dropdown-item>
                     <el-dropdown-item command="feedbacks">反馈统计</el-dropdown-item>
                     <el-dropdown-item divided command="delete">删除活动</el-dropdown-item>
                   </el-dropdown-menu>
@@ -124,6 +125,7 @@ import { deleteActivity, listActivities } from '../../api/activity'
 import { listCheckins } from '../../api/checkin'
 import { listFeedbacks } from '../../api/feedback'
 import { listRegistrations } from '../../api/registration'
+import { issueActivityRewards } from '../../api/reward'
 import { useUserStore } from '../../stores/user'
 import { statusTagType, statusText } from '../../utils/options'
 
@@ -179,7 +181,17 @@ async function handleCommand(command, row) {
     await remove(row.id)
     return
   }
+  if (command === 'rewards') {
+    await issueRewards(row)
+    return
+  }
   router.push(`/admin/activities/${row.id}/${command}`)
+}
+
+async function issueRewards(row) {
+  await ElMessageBox.confirm('确认给该活动已签到学生发放奖励？未签到学生不会获得奖励。', '发放奖励')
+  const issued = await issueActivityRewards(row.id)
+  ElMessage.success(`已发放 ${issued.length} 条活动奖励`)
 }
 
 async function remove(id) {

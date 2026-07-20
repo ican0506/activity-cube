@@ -16,6 +16,7 @@ public class User {
     private String username;
     private String password;
     private String realName;
+    private String avatarUrl;
     private String studentNo;
     private String workNo;
     private String gradeYear;
@@ -27,6 +28,7 @@ public class User {
     private String className;
     private String majorClass;
     private String phone;
+    private String bio;
     private Integer status;
     @TableField("create_time")
     private LocalDateTime createdAt;

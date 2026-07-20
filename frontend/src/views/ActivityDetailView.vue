@@ -73,6 +73,8 @@
             <div class="info-card"><span>活动时间</span><strong>{{ detail.activity.startTime }} 至 {{ detail.activity.endTime }}</strong></div>
             <div class="info-card"><span>活动校区</span><strong>{{ detail.activity.campus }}</strong></div>
             <div class="info-card"><span>活动形式</span><strong>{{ activityModeText(detail.activity) }}</strong></div>
+            <div class="info-card"><span>活动类型</span><strong>{{ activityCategoryText(detail.activity) }}</strong></div>
+            <div class="info-card"><span>活动奖励</span><strong>{{ rewardSummary(detail.activity) }}</strong></div>
             <div class="info-card"><span>活动地点</span><strong>{{ detail.activity.location || '地点待定' }}</strong></div>
             <div class="info-card"><span>跨校区报名</span><strong>{{ detail.activity.allowCrossCampus ? '允许' : '不允许' }}</strong></div>
           </div>
@@ -139,9 +141,11 @@ import {
   canRegister,
   checkinDisabledReason,
   feedbackDisabledReason,
+  activityCategoryText,
   activityModeText,
   isOnlineActivity,
   registerDisabledReason,
+  rewardSummary,
   statusTagType,
   statusText
 } from '../utils/options'

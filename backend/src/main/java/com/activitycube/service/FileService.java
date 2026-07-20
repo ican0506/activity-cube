@@ -18,8 +18,10 @@ import java.util.UUID;
 @Service
 public class FileService {
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+    private static final Set<String> AVATAR_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Set<String> VIDEO_EXTENSIONS = Set.of("mp4", "webm", "mov");
     private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
+    private static final long MAX_AVATAR_SIZE = 2L * 1024 * 1024;
     private static final long MAX_VIDEO_SIZE = 100L * 1024 * 1024;
 
     private final Path uploadRoot;
@@ -66,6 +68,41 @@ public class FileService {
             throw new BusinessException("请选择要上传的文件");
         }
         return List.of(files).stream().map(this::upload).toList();
+    }
+
+    public FileUploadResult uploadAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("请选择要上传的头像");
+        }
+        String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+        String extension = extension(originalName);
+        if (!AVATAR_EXTENSIONS.contains(extension)) {
+            throw new BusinessException("头像只支持 jpg、jpeg、png、webp 图片");
+        }
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            throw new BusinessException("头像文件不能超过 2MB");
+        }
+
+        String fileName = UUID.randomUUID().toString().replace("-", "") + "." + extension;
+        Path targetDir = uploadRoot.resolve("avatar").normalize();
+        Path targetFile = targetDir.resolve(fileName).normalize();
+        if (!targetFile.startsWith(uploadRoot)) {
+            throw new BusinessException("文件保存路径不合法");
+        }
+        try {
+            Files.createDirectories(targetDir);
+            file.transferTo(targetFile);
+        } catch (IOException exception) {
+            throw new BusinessException("头像保存失败，请稍后重试");
+        }
+
+        FileUploadResult result = new FileUploadResult();
+        result.setUrl("/uploads/avatar/%s".formatted(fileName));
+        result.setFileName(fileName);
+        result.setOriginalName(originalName);
+        result.setFileType("image");
+        result.setSize(file.getSize());
+        return result;
     }
 
     private String extension(String originalName) {

@@ -3,7 +3,14 @@ export const userCampuses = ['龙子湖校区', '文化路校区', '许昌校区
 export const activityCampuses = ['全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上']
 export const activityModes = [
   { label: '线下活动', value: 'offline' },
-  { label: '线上活动', value: 'online' }
+  { label: '线上活动', value: 'online' },
+  { label: '线上线下结合', value: 'hybrid' }
+]
+export const activityCategories = ['公益活动', '实践活动', '志愿服务', '讲座培训', '文体活动', '竞赛活动', '社团活动', '学院活动', '其他']
+export const rewardTypes = ['无', '课外学时', '积分', '证书', '实物奖励']
+export const rewardStatuses = [
+  { label: '不设置奖励', value: false },
+  { label: '设置奖励', value: true }
 ]
 export const statuses = ['全部', 'DRAFT', 'PENDING_REVIEW', 'REJECTED', 'NOT_STARTED', 'REGISTERING', 'WAITING_START', 'ONGOING', 'ENDED', 'CANCELLED']
 export const userRoleOptions = [
@@ -88,7 +95,20 @@ export function isOnlineActivity(activity) {
 }
 
 export function activityModeText(activity) {
-  return isOnlineActivity(activity) ? '线上活动' : '线下活动'
+  if (activity?.activityMode === 'online') return '线上活动'
+  if (activity?.activityMode === 'hybrid') return '线上线下结合'
+  return '线下活动'
+}
+
+export function activityCategoryText(activity) {
+  return activity?.activityCategory || '其他'
+}
+
+export function rewardSummary(activity) {
+  if (!activity?.rewardEnabled || !activity?.rewardType || activity.rewardType === '无') return '无奖励'
+  if (activity.rewardType === '课外学时') return `${activity.rewardHours || 0} 课外学时`
+  if (activity.rewardType === '积分') return `${activity.rewardPoints || 0} 积分`
+  return activity.rewardDescription || activity.rewardType
 }
 
 export function checkinDisabledReason(activity) {

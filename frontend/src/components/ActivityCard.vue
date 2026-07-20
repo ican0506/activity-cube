@@ -35,7 +35,9 @@
           报名上限 {{ activity.maxParticipants || '不限' }}
         </span>
         <span class="wheat-badge">{{ activityModeText(activity) }}</span>
+        <span class="wheat-badge">{{ activityCategoryText(activity) }}</span>
       </div>
+      <p v-if="activity.rewardEnabled" class="page-subtitle">活动奖励：{{ rewardSummary(activity) }}</p>
 
       <div class="activity-actions">
         <RouterLink :to="`/activities/${activity.id}`">
@@ -57,7 +59,7 @@
 <script setup>
 import { Calendar, Location, Right, School, Tickets, UserFilled } from '@element-plus/icons-vue'
 import { resolveFileUrl } from '../api/file'
-import { activityModeText, canRegister, registerDisabledReason, statusTagType, statusText } from '../utils/options'
+import { activityCategoryText, activityModeText, canRegister, registerDisabledReason, rewardSummary, statusTagType, statusText } from '../utils/options'
 
 defineProps({
   activity: {

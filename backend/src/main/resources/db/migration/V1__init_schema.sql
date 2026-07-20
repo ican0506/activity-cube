@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号',
   `password` VARCHAR(100) NOT NULL COMMENT 'BCrypt密码',
   `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+  `avatar_url` VARCHAR(500) DEFAULT NULL COMMENT '头像URL',
   `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学号',
   `work_no` VARCHAR(50) DEFAULT NULL COMMENT '工号',
   `grade_year` VARCHAR(20) DEFAULT NULL COMMENT '年级',
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `class_name` VARCHAR(100) DEFAULT NULL COMMENT '班级',
   `major_class` VARCHAR(100) DEFAULT NULL COMMENT '兼容旧字段：专业班级',
   `phone` VARCHAR(30) DEFAULT NULL COMMENT '手机号',
+  `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1启用/0禁用',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `description` TEXT NOT NULL COMMENT '活动介绍',
   `cover_url` VARCHAR(500) DEFAULT NULL COMMENT '封面图URL',
   `activity_mode` VARCHAR(20) NOT NULL DEFAULT 'offline' COMMENT '活动形式',
+  `activity_category` VARCHAR(50) NOT NULL DEFAULT '其他' COMMENT '活动类型',
   `checkin_code` VARCHAR(64) DEFAULT NULL COMMENT '签到码',
   `campus` VARCHAR(50) NOT NULL COMMENT '活动校区',
   `location` VARCHAR(200) NOT NULL COMMENT '活动地点',
@@ -44,6 +47,11 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `checkin_end_time` DATETIME NOT NULL COMMENT '签到结束时间',
   `max_participants` INT DEFAULT NULL COMMENT '人数上限',
   `allow_cross_campus` TINYINT NOT NULL DEFAULT 1 COMMENT '允许跨校区',
+  `reward_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT '是否设置奖励',
+  `reward_type` VARCHAR(30) NOT NULL DEFAULT '无' COMMENT '奖励类型',
+  `reward_hours` DECIMAL(5,1) NOT NULL DEFAULT 0.0 COMMENT '课外学时数量',
+  `reward_points` INT NOT NULL DEFAULT 0 COMMENT '积分数量',
+  `reward_description` VARCHAR(500) DEFAULT NULL COMMENT '奖励说明',
   `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT' COMMENT '工作流状态',
   `reject_reason` VARCHAR(500) DEFAULT NULL COMMENT '驳回原因',
   `creator_id` BIGINT NOT NULL COMMENT '创建人ID',
@@ -169,6 +177,29 @@ CREATE TABLE IF NOT EXISTS `lottery_result` (
   CONSTRAINT `fk_lottery_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_lottery_registration` FOREIGN KEY (`registration_id`) REFERENCES `registration` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖结果表';
+
+CREATE TABLE IF NOT EXISTS `student_activity_reward` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '奖励记录ID',
+  `activity_id` BIGINT NOT NULL COMMENT '活动ID',
+  `student_id` BIGINT NOT NULL COMMENT '学生用户ID',
+  `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学号',
+  `activity_category` VARCHAR(50) DEFAULT NULL COMMENT '活动类型',
+  `reward_type` VARCHAR(30) NOT NULL COMMENT '奖励类型',
+  `reward_hours` DECIMAL(5,1) NOT NULL DEFAULT 0.0 COMMENT '课外学时数量',
+  `reward_points` INT NOT NULL DEFAULT 0 COMMENT '积分数量',
+  `reward_description` VARCHAR(500) DEFAULT NULL COMMENT '奖励说明',
+  `issued_by` BIGINT NOT NULL COMMENT '发放操作人ID',
+  `issued_by_name` VARCHAR(100) DEFAULT NULL COMMENT '发放操作人姓名',
+  `issued_time` DATETIME NOT NULL COMMENT '发放时间',
+  `status` VARCHAR(20) NOT NULL DEFAULT 'issued' COMMENT '发放状态',
+  `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_student_activity_reward` (`activity_id`, `student_id`),
+  KEY `idx_reward_student` (`student_id`),
+  CONSTRAINT `fk_reward_activity` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reward_student` FOREIGN KEY (`student_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生活动奖励记录表';
 
 CREATE TABLE IF NOT EXISTS `operation_log` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',

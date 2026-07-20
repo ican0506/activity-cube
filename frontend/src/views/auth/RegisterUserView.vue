@@ -2,10 +2,12 @@
   <section class="login-page">
     <div class="login-card register-card">
       <div class="login-brand">
-        <span class="brand-mark">AC</span>
+        <span class="brand-mark">
+          <img :src="schoolEmblem" alt="河南农业大学校徽" />
+        </span>
         <div>
-          <h1>注册账号</h1>
-          <p>注册后自动以学生身份进入系统</p>
+          <h1 class="login-school-name">河南农业大学</h1>
+          <p>注册学生账号，进入校园活动平台</p>
         </div>
       </div>
 
@@ -60,6 +62,7 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
 import { userCampuses } from '../../utils/options'
 import { parseStudentNo } from '../../utils/studentNo'
+import schoolEmblem from '../../assets/school-emblem-clean.png'
 
 const router = useRouter()
 const userStore = useUserStore()

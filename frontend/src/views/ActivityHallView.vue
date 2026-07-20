@@ -13,14 +13,11 @@
         </div>
         <div class="hero-actions">
           <el-button class="hero-button" :icon="Refresh" @click="load">刷新活动</el-button>
-          <RouterLink to="/scan">
-            <el-button class="hero-button" :icon="Camera">扫一扫</el-button>
-          </RouterLink>
         </div>
       </div>
       <div class="hero-card">
         <span>当前可浏览活动</span>
-        <strong>{{ activities.length }}</strong>
+        <strong>{{ visibleActivities.length }}</strong>
         <p>连接每一次校园参与，让活动信息更清晰。</p>
         <div class="hero-stat-grid">
           <div class="hero-stat"><b>{{ registeringCount }}</b><small>报名中</small></div>
@@ -53,10 +50,10 @@
     </div>
 
     <div v-loading="loading" class="grid activity-grid">
-      <ActivityCard v-for="activity in activities" :key="activity.id" :activity="activity" />
+      <ActivityCard v-for="activity in visibleActivities" :key="activity.id" :activity="activity" />
     </div>
     <el-empty
-      v-if="!loading && activities.length === 0"
+      v-if="!loading && visibleActivities.length === 0"
       class="panel empty-wrap"
       description="当前校区暂无活动，去发起一场属于农大学子的校园活动吧。"
     />
@@ -65,7 +62,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Camera, Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh, Search } from '@element-plus/icons-vue'
 import ActivityCard from '../components/ActivityCard.vue'
 import { listActivities } from '../api/activity'
 import { statuses, statusText } from '../utils/options'
@@ -76,6 +73,10 @@ const loading = ref(false)
 const quickCampuses = ['全部', '全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上']
 const registeringCount = computed(() => activities.value.filter((item) => item.status === 'REGISTERING').length)
 const ongoingCount = computed(() => activities.value.filter((item) => item.status === 'ONGOING').length)
+const visibleActivities = computed(() => {
+  if (filters.status === 'ENDED') return activities.value
+  return activities.value.filter((item) => item.status !== 'ENDED')
+})
 
 function setCampus(campus) {
   filters.campus = campus

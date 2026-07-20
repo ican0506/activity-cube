@@ -8,6 +8,7 @@ import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Notice;
 import com.activitycube.entity.NoticeReceiver;
 import com.activitycube.entity.Registration;
+import com.activitycube.entity.StudentActivityReward;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
@@ -154,6 +155,15 @@ public class NoticeService {
         Notice notice = createNotice(activity.getId(), operator, "补签成功",
                 "你在【" + activity.getTitle() + "】中的签到已由工作人员补签完成。", TYPE_CHECKIN_REMINDER, "single_user");
         createReceivers(notice.getId(), List.of(student.getId()));
+    }
+
+    public void notifyActivityRewardIssued(Activity activity, StudentActivityReward reward, User operator) {
+        if (activity == null || reward == null || reward.getStudentId() == null) {
+            return;
+        }
+        Notice notice = createNotice(activity.getId(), operator, "活动奖励已发放",
+                "你在【" + activity.getTitle() + "】中的活动奖励已发放，可在个人中心查看。", TYPE_ACTIVITY, "single_user");
+        createReceivers(notice.getId(), List.of(reward.getStudentId()));
     }
 
     private Notice createNotice(Long activityId, User sender, String title, String content, String noticeType, String targetType) {

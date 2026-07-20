@@ -35,6 +35,7 @@ docs/sql/media_upload_patch.sql
 docs/sql/manual_checkin_patch.sql
 docs/sql/activity_review_operation_log_patch.sql
 docs/sql/notice_center_patch.sql
+docs/sql/activity_reward_patch.sql
 ```
 
 执行唯一约束前必须先运行 `docs/sql/duplicate_check.sql`。如果查询结果不为空，先保留正确记录、删除重复记录，再执行 `docs/sql/unique_constraints_patch.sql`。
@@ -112,6 +113,12 @@ VITE_API_BASE_URL=http://10.74.51.156:8080/api
 | 学生 | 2321241389 | 123456 | 学号登录，张三 |
 | 负责人 | T2024001 | 123456 | 工号登录，李老师 |
 | 管理员 | admin | 123456 | 管理员账号 |
+
+## 核心接口补充
+
+- `POST /api/admin/activities/{id}/rewards/issue`：管理员或活动创建者给已签到学生发放活动奖励。
+- `GET /api/admin/activities/{id}/rewards`：查看某活动奖励发放记录。
+- `GET /api/student/rewards`：学生查看个人中心活动成果。
 
 ## 手机扫码访问
 

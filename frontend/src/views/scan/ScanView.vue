@@ -10,7 +10,7 @@
       <div class="hero-card scan-hero-card">
         <span>扫码类型</span>
         <strong>报名 / 签到</strong>
-        <p>摄像头不可用时，可使用下方备用输入方式继续。</p>
+        <p>{{ showFallback ? '摄像头不可用时，可使用下方备用输入方式继续。' : '进入页面后会自动打开摄像头开始识别。' }}</p>
       </div>
     </div>
 
@@ -30,7 +30,7 @@
         </div>
 
         <div class="button-row scan-camera-actions">
-          <el-button type="primary" :loading="startingCamera" :disabled="cameraRunning" @click="startCamera">启动扫码</el-button>
+          <el-button type="primary" :loading="startingCamera" :disabled="cameraRunning || startingCamera" @click="startCamera">启动扫码</el-button>
           <el-button :disabled="!cameraRunning" @click="stopCamera">停止扫码</el-button>
         </div>
 
@@ -44,7 +44,7 @@
         />
       </div>
 
-      <div class="panel scan-manual-card agri-card">
+      <div v-if="showFallback" ref="fallbackRef" class="panel scan-manual-card agri-card">
         <div class="section-title scan-section-title">
           <div>
             <h2>备用方式</h2>
@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { resolveCheckinCode } from '../../api/scan'
@@ -85,21 +85,37 @@ import { buildScanTarget } from '../../utils/scanResolve'
 
 const router = useRouter()
 const videoRef = ref(null)
+const fallbackRef = ref(null)
 const checkinCode = ref('')
 const qrLink = ref('')
 const cameraMessage = ref('')
 const cameraRunning = ref(false)
 const startingCamera = ref(false)
+const showFallback = ref(false)
 const resolvingCheckinCode = ref(false)
 let stream = null
 let scanTimer = null
 
-const cameraPlaceholder = computed(() => cameraMessage.value ? '请使用下方备用方式继续' : '等待启动摄像头')
+const cameraPlaceholder = computed(() => {
+  if (startingCamera.value) return '正在启动摄像头'
+  if (cameraMessage.value) return '请使用下方备用方式继续'
+  return '正在准备摄像头'
+})
 
 async function startCamera() {
   if (cameraRunning.value || startingCamera.value) return
   cameraMessage.value = ''
-  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !('BarcodeDetector' in window)) {
+  showFallback.value = false
+
+  if (!window.isSecureContext) {
+    showCameraUnavailable()
+    return
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showCameraUnavailable()
+    return
+  }
+  if (!('BarcodeDetector' in window)) {
     showCameraUnavailable()
     return
   }
@@ -123,10 +139,18 @@ async function startCamera() {
 }
 
 function showCameraUnavailable() {
-  cameraMessage.value = '当前浏览器无法启动摄像头，你可以粘贴二维码链接或输入现场签到码继续。'
+  cameraMessage.value = '当前环境无法使用摄像头，已为你切换到备用方式。'
+  showFallback.value = true
+  nextTick(() => {
+    fallbackRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 function scanLoop() {
+  if (scanTimer) {
+    window.clearInterval(scanTimer)
+    scanTimer = null
+  }
   const Detector = window.BarcodeDetector
   const detector = new Detector({ formats: ['qr_code'] })
   scanTimer = window.setInterval(async () => {
@@ -188,5 +212,6 @@ function navigate(value, invalidMessage) {
   router.push(target)
 }
 
+onMounted(startCamera)
 onBeforeUnmount(stopCamera)
 </script>
