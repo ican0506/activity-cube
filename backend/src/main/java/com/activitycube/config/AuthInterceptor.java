@@ -41,6 +41,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             response.getWriter().write("{\"code\":401,\"message\":\"账号已禁用，请联系管理员\",\"data\":null}");
             return false;
         }
+        if (!hasAdminApiPermission(request.getRequestURI(), user)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\":403,\"message\":\"你没有权限访问该功能\",\"data\":null}");
+            return false;
+        }
         UserContext.set(user);
         return true;
     }
@@ -48,5 +54,22 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         UserContext.clear();
+    }
+
+    private boolean hasAdminApiPermission(String uri, User user) {
+        if (isAdminOnlyPath(uri)) {
+            return "admin".equals(user.getRole());
+        }
+        if (uri.startsWith("/api/admin/")) {
+            return "admin".equals(user.getRole()) || "organizer".equals(user.getRole());
+        }
+        return true;
+    }
+
+    private boolean isAdminOnlyPath(String uri) {
+        return uri.startsWith("/api/admin/users")
+                || uri.startsWith("/api/admin/notices/system")
+                || uri.startsWith("/api/admin/operation-logs")
+                || uri.startsWith("/api/activities/admin/");
     }
 }

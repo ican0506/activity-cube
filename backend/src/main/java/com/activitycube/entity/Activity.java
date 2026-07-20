@@ -18,6 +18,7 @@ public class Activity {
     private String coverUrl;
     private String activityMode;
     private String checkinCode;
+    private String rejectReason;
     private String campus;
     private String location;
     private LocalDateTime startTime;
@@ -29,6 +30,8 @@ public class Activity {
     private Integer maxParticipants;
     private Boolean allowCrossCampus;
     private String status;
+    @TableField(exist = false)
+    private String reviewStatus;
     private Long creatorId;
     @TableField("create_time")
     private LocalDateTime createdAt;

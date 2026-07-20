@@ -9,27 +9,18 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("user")
-public class User {
+@TableName("operation_log")
+public class OperationLog {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long userId;
     private String username;
-    private String password;
-    private String realName;
-    private String studentNo;
-    private String workNo;
-    private String gradeYear;
-    private String majorCode;
-    private String majorName;
     private String role;
-    private String campus;
-    private String college;
-    private String className;
-    private String majorClass;
-    private String phone;
-    private Integer status;
+    private String operation;
+    private String targetType;
+    private Long targetId;
+    private String detail;
+    private String ip;
     @TableField("create_time")
     private LocalDateTime createdAt;
-    @TableField("update_time")
-    private LocalDateTime updatedAt;
 }

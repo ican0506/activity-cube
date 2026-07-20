@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 public final class ActivityStatusUtil {
     public static final String DRAFT = "DRAFT";
+    public static final String PENDING_REVIEW = "PENDING_REVIEW";
+    public static final String REJECTED = "REJECTED";
     public static final String PUBLISHED = "PUBLISHED";
     public static final String NOT_STARTED = "NOT_STARTED";
     public static final String REGISTERING = "REGISTERING";
@@ -26,8 +28,8 @@ public final class ActivityStatusUtil {
             return ENDED;
         }
         String manualStatus = activity.getStatus();
-        if (DRAFT.equals(manualStatus)) {
-            return DRAFT;
+        if (DRAFT.equals(manualStatus) || PENDING_REVIEW.equals(manualStatus) || REJECTED.equals(manualStatus)) {
+            return manualStatus;
         }
         if (CANCELLED.equals(manualStatus)) {
             return CANCELLED;
@@ -52,11 +54,11 @@ public final class ActivityStatusUtil {
     }
 
     public static boolean isManualStatus(String status) {
-        return DRAFT.equals(status) || CANCELLED.equals(status);
+        return DRAFT.equals(status) || PENDING_REVIEW.equals(status) || REJECTED.equals(status) || CANCELLED.equals(status);
     }
 
     public static String normalizeManualStatus(String status) {
-        if (DRAFT.equals(status) || CANCELLED.equals(status)) {
+        if (DRAFT.equals(status) || PENDING_REVIEW.equals(status) || REJECTED.equals(status) || CANCELLED.equals(status)) {
             return status;
         }
         return PUBLISHED;
