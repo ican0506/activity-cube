@@ -2,9 +2,7 @@
   <section>
     <div class="lite-page-head">
       <div>
-        <span class="section-eyebrow">管理端</span>
-        <h1>活动管理</h1>
-        <p>管理活动发布、二维码、名单、统计和工具入口。</p>
+        <h1>活动管理中心</h1>
       </div>
       <div class="button-row">
         <RouterLink v-if="userStore.canAdmin" to="/admin/activity-reviews"><el-button>待审核活动</el-button></RouterLink>

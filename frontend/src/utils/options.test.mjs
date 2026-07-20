@@ -6,9 +6,16 @@ import {
   canFeedback,
   checkinDisabledReason,
   feedbackDisabledReason,
+  activityCampusText,
   activityModeText,
+  activityLocationText,
+  activityScopeMatches,
+  activityCategoryText,
+  isStudentVisibleActivity,
   isOnlineActivity,
   registerDisabledReason,
+  studentActivityStatus,
+  studentActivityStatusText,
   userRoleText,
   userStatusText
 } from './options.js'
@@ -47,7 +54,46 @@ test('activity mode helpers default missing mode to offline', () => {
   assert.equal(isOnlineActivity({ activityMode: 'online' }), true)
   assert.equal(isOnlineActivity({ activityMode: 'offline' }), false)
   assert.equal(activityModeText({ activityMode: 'online' }), '线上活动')
+  assert.equal(activityModeText({ activityMode: 'hybrid' }), '混合活动')
   assert.equal(activityModeText({}), '线下活动')
+})
+
+test('student activity status hides backend workflow states', () => {
+  assert.equal(isStudentVisibleActivity({ status: 'DRAFT' }), false)
+  assert.equal(isStudentVisibleActivity({ status: 'PENDING_REVIEW' }), false)
+  assert.equal(isStudentVisibleActivity({ status: 'REJECTED' }), false)
+  assert.equal(isStudentVisibleActivity({ status: 'CANCELLED' }), false)
+  assert.equal(studentActivityStatusText({ status: 'REGISTERING' }), '报名中')
+  assert.equal(studentActivityStatusText({ status: 'ENDED' }), '已结束')
+})
+
+test('student activity status derives checkin window as checkin active', () => {
+  const now = new Date()
+  const started = new Date(now.getTime() - 60 * 1000).toISOString()
+  const later = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+
+  const activity = { status: 'ONGOING', checkinStartTime: started, checkinEndTime: later }
+
+  assert.equal(studentActivityStatus(activity), 'CHECKIN')
+  assert.equal(studentActivityStatusText(activity), '签到中')
+})
+
+test('activity category helper limits student-facing categories', () => {
+  assert.equal(activityCategoryText({ activityCategory: '公益活动' }), '公益活动')
+  assert.equal(activityCategoryText({ activityCategory: '学院活动' }), '其他')
+})
+
+test('activity scope helper supports student hall range filters', () => {
+  assert.equal(activityScopeMatches({ campus: '龙子湖校区' }, '全部'), true)
+  assert.equal(activityScopeMatches({ campus: '全校区' }, '全校区'), true)
+  assert.equal(activityScopeMatches({ activityMode: 'online' }, '线上活动'), true)
+  assert.equal(activityScopeMatches({ activityMode: 'offline', campus: '龙子湖校区' }, '线上活动'), false)
+})
+
+test('activity card display falls back for online activities without location', () => {
+  assert.equal(activityLocationText({ activityMode: 'online', location: '' }), '线上活动')
+  assert.equal(activityLocationText({ activityMode: 'offline', location: '' }), '地点待定')
+  assert.equal(activityCampusText({ campus: '全校区' }), '全校区')
 })
 
 test('user role and status labels support student role migration', () => {

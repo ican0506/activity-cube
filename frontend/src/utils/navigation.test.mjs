@@ -13,11 +13,11 @@ test('admin navigation does not contain student personal pages', () => {
 
   assert.ok(!labels.includes('我的报名'))
   assert.ok(!labels.includes('我的签到'))
-  assert.deepEqual(labels, ['数据总览', '活动管理', '活动审核', '用户管理', '系统通知', '操作日志'])
+  assert.deepEqual(labels, ['活动管理中心', '活动审核', '用户管理', '系统通知', '操作日志'])
 })
 
 test('organizer navigation focuses on management pages', () => {
   const labels = navItemsForRole('organizer').map((item) => item.label)
 
-  assert.deepEqual(labels, ['数据总览', '我的活动', '活动管理', '通知管理'])
+  assert.deepEqual(labels, ['活动管理中心', '创建活动'])
 })

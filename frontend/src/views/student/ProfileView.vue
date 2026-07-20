@@ -34,7 +34,6 @@
         <div class="section-title compact">
           <div>
             <h2>学生身份</h2>
-            <p>学籍信息由系统维护，个人中心仅允许修改头像、手机号和简介。</p>
           </div>
         </div>
         <div class="identity-list">
@@ -49,7 +48,6 @@
         <div class="section-title compact">
           <div>
             <h2>快捷入口</h2>
-            <p>常用学生端功能集中在这里。</p>
           </div>
         </div>
         <div class="quick-entry-grid">
@@ -74,7 +72,6 @@
         <div class="section-title compact">
           <div>
             <h2>待办提醒</h2>
-            <p>即将开始、待签到、待反馈和未读消息会优先展示。</p>
           </div>
         </div>
         <div v-if="todos.length" class="todo-list">
@@ -94,7 +91,6 @@
         <div class="section-title compact">
           <div>
             <h2>账号安全</h2>
-            <p>建议定期修改密码，不要和其他平台共用密码。</p>
           </div>
         </div>
         <div class="security-box">
@@ -111,7 +107,6 @@
       <div class="section-title">
         <div>
           <h2>我的活动成果</h2>
-          <p>只有已报名且已签到，并由负责人或管理员发放奖励的活动会展示在这里。</p>
         </div>
       </div>
       <el-table v-if="rewards.length" :data="rewards" stripe class="desktop-table">

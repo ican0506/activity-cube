@@ -69,5 +69,5 @@ test('chooses default login target by role when redirect is absent', () => {
   assert.equal(defaultTargetForRole('student'), '/activities')
   assert.equal(defaultTargetForRole('user'), '/activities')
   assert.equal(defaultTargetForRole('organizer'), '/admin/activities')
-  assert.equal(defaultTargetForRole('admin'), '/admin/dashboard')
+  assert.equal(defaultTargetForRole('admin'), '/admin/activities')
 })

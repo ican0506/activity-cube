@@ -45,7 +45,7 @@ export function normalizeLoginTarget(target, fallback = DEFAULT_LOGIN_TARGET) {
 }
 
 export function defaultTargetForRole(role) {
-  if (role === 'admin') return '/admin/dashboard'
+  if (role === 'admin') return '/admin/activities'
   if (role === 'organizer') return '/admin/activities'
   return DEFAULT_LOGIN_TARGET
 }

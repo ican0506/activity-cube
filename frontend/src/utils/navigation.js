@@ -4,15 +4,12 @@ const studentNav = [
 ]
 
 const organizerNav = [
-  { label: '数据总览', to: '/admin/dashboard' },
-  { label: '我的活动', to: '/admin/activities' },
-  { label: '活动管理', to: '/admin/activities/create' },
-  { label: '通知管理', to: '/admin/activities' }
+  { label: '活动管理中心', to: '/admin/activities' },
+  { label: '创建活动', to: '/admin/activities/create' }
 ]
 
 const adminNav = [
-  { label: '数据总览', to: '/admin/dashboard' },
-  { label: '活动管理', to: '/admin/activities' },
+  { label: '活动管理中心', to: '/admin/activities' },
   { label: '活动审核', to: '/admin/activity-reviews' },
   { label: '用户管理', to: '/admin/users' },
   { label: '系统通知', to: '/admin/notices/system' },
