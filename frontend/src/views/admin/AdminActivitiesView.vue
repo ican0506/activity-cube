@@ -1,14 +1,14 @@
 <template>
   <section>
-    <div class="campus-hero admin-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">校园活动中枢</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">管理端</span>
         <h1>活动管理</h1>
-        <p>面向龙子湖、文化路、许昌三校区，统一管理活动发布、扫码签到、名单导出、抽签分组和反馈复盘。</p>
+        <p>管理活动发布、二维码、名单、统计和工具入口。</p>
       </div>
       <div class="button-row">
         <RouterLink v-if="userStore.canAdmin" to="/admin/activity-reviews"><el-button>待审核活动</el-button></RouterLink>
-        <RouterLink to="/admin/activities/create"><el-button class="hero-button" :icon="Plus">创建活动</el-button></RouterLink>
+        <RouterLink to="/admin/activities/create"><el-button type="primary" :icon="Plus">创建活动</el-button></RouterLink>
       </div>
     </div>
 

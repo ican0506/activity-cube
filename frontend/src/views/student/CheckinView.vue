@@ -1,12 +1,12 @@
 <template>
   <section v-loading="loading">
-    <div class="hero campus-hero">
+    <div class="lite-page-head">
       <div>
-        <div class="motto-badge">扫码签到 · 有序参与</div>
+        <span class="section-eyebrow">活动签到</span>
         <h1>活动签到</h1>
-        <p>扫码后先确认活动信息，再点击确认签到。后端会校验报名记录、重复签到和签到时间。</p>
+        <p>确认活动信息后再完成签到。</p>
       </div>
-      <div v-if="activity" class="hero-card">
+      <div v-if="activity" class="lite-summary-card">
         <span>{{ statusText(activity.status) }}</span>
         <strong>{{ activity.title }}</strong>
         <p>签到：{{ activity.checkinStartTime || activity.startTime }} 至 {{ activity.checkinEndTime || activity.endTime }}</p>

@@ -1,8 +1,8 @@
 <template>
   <section>
-    <div class="campus-hero admin-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">系统通知</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">系统通知</span>
         <h1>发布系统通知</h1>
         <p>面向全部学生发送平台公告、活动提醒或重要说明。</p>
       </div>

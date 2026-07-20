@@ -1,7 +1,7 @@
 <template>
   <section v-loading="loading">
     <div v-if="detail" class="detail-layout">
-      <aside class="activity-poster campus-hero" :style="posterStyle">
+      <aside class="activity-poster" :style="posterStyle">
         <div class="poster-content">
           <div class="motto-badge">让每一次校园活动都有序、高效、可追踪。</div>
           <el-tag :type="statusTagType(detail.activity.status)" effect="dark">
@@ -164,7 +164,7 @@ const posterStyle = computed(() => {
   const coverUrl = detail.value?.activity?.coverUrl
   if (!coverUrl) return {}
   return {
-    backgroundImage: `linear-gradient(145deg, rgba(7, 95, 46, 0.76), rgba(11, 125, 59, 0.48)), url("${resolveFileUrl(coverUrl)}")`
+    backgroundImage: `linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(247, 252, 249, 0.88)), url("${resolveFileUrl(coverUrl)}")`
   }
 })
 

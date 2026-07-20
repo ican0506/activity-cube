@@ -6,7 +6,7 @@
         <p>活动负责人查看平台运行概览，快速进入活动创建和管理。</p>
       </div>
       <RouterLink to="/admin/activities/create">
-        <el-button class="hero-button">创建活动</el-button>
+        <el-button type="primary">创建活动</el-button>
       </RouterLink>
     </div>
 

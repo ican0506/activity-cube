@@ -1,15 +1,15 @@
 <template>
   <section>
-    <div class="hero campus-hero">
+    <div class="lite-page-head">
       <div>
-        <span class="motto-badge">活动反馈 · 共创更好的校园活动</span>
+        <span class="section-eyebrow">活动反馈</span>
         <h1>活动反馈</h1>
-        <p>{{ activity?.title || '分享你的活动体验，帮助活动持续优化。' }} 你的反馈会帮助活动越办越好。</p>
+        <p>{{ activity?.title || '分享你的活动体验。' }}</p>
       </div>
-      <div class="hero-card">
+      <div class="lite-summary-card">
         <span>满意度评分</span>
         <strong>{{ form.score }} 分</strong>
-        <p>可匿名提交，负责人只看到你愿意分享的内容。</p>
+        <p>支持匿名提交</p>
       </div>
     </div>
 

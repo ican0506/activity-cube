@@ -1,26 +1,18 @@
 <template>
   <section>
-    <div class="hero campus-orbit">
+    <div class="lite-page-head">
       <div>
+        <span class="section-eyebrow">活动魔方</span>
         <h1>活动魔方</h1>
-        <p>面向河南农业大学校园活动组织的一站式轻工具平台，覆盖活动发布、报名收集、二维码签到、名单导出、随机抽签分组和反馈复盘。</p>
-        <div class="hero-actions">
-          <RouterLink to="/activities">
-            <el-button class="hero-button" :icon="Grid">进入活动大厅</el-button>
-          </RouterLink>
-          <RouterLink to="/my/registrations">
-            <el-button class="hero-button" plain :icon="Tickets">我的报名</el-button>
-          </RouterLink>
-        </div>
+        <p>校园活动的报名、签到、统计和反馈工具。</p>
       </div>
-      <div class="hero-card">
-        <span>校园微服务</span>
-        <strong>轻量闭环</strong>
-        <p>创建、报名、签到、统计、反馈一条线完成。</p>
-        <div class="hero-stat-grid">
-          <div class="hero-stat"><b>3</b><small>实体校区</small></div>
-          <div class="hero-stat"><b>H5</b><small>手机端适配</small></div>
-        </div>
+      <div class="button-row">
+        <RouterLink to="/activities">
+          <el-button type="primary" :icon="Grid">进入活动大厅</el-button>
+        </RouterLink>
+        <RouterLink to="/my/registrations">
+          <el-button :icon="Tickets">我的报名</el-button>
+        </RouterLink>
       </div>
     </div>
 

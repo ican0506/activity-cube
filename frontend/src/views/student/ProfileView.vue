@@ -1,21 +1,21 @@
 <template>
   <section class="profile-page" v-loading="loading">
-    <div class="profile-hero campus-hero">
+    <div class="profile-summary-card">
       <div class="profile-identity">
         <el-avatar :size="86" :src="avatarUrl" class="profile-avatar">
           {{ profileInitial }}
         </el-avatar>
         <div>
-          <span class="motto-badge">个人中心</span>
+          <span class="section-eyebrow">个人中心</span>
           <h1>{{ profile.realName || profile.username || '农大学子' }}</h1>
           <p>{{ profile.studentNo || '-' }} · {{ profile.campus || '-' }} · {{ profile.college || '-' }}</p>
-          <p class="profile-bio">{{ profile.bio || '记录每一次报名、签到、反馈和活动成果。' }}</p>
+          <p class="profile-bio">{{ profile.bio || '暂无个人简介' }}</p>
         </div>
       </div>
       <div class="profile-hero-actions">
-        <el-button class="hero-button" @click="openEditDialog">编辑资料</el-button>
+        <el-button type="primary" @click="openEditDialog">编辑资料</el-button>
         <RouterLink to="/profile/security">
-          <el-button plain>账号安全</el-button>
+          <el-button>账号安全</el-button>
         </RouterLink>
       </div>
     </div>
@@ -34,7 +34,7 @@
         <div class="section-title compact">
           <div>
             <h2>学生身份</h2>
-            <p>学籍相关信息由系统维护，个人中心仅允许修改头像、手机号和简介。</p>
+            <p>学籍信息由系统维护，个人中心仅允许修改头像、手机号和简介。</p>
           </div>
         </div>
         <div class="identity-list">
@@ -364,16 +364,16 @@ onMounted(loadProfile)
   gap: 18px;
 }
 
-.profile-hero {
+.profile-summary-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  min-height: 230px;
-  padding: clamp(22px, 4vw, 38px);
-  border-radius: 24px;
-  color: #fff;
-  box-shadow: 0 20px 60px rgba(11, 125, 59, 0.18);
+  padding: 20px;
+  border: 1px solid var(--ac-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--ac-shadow);
 }
 
 .profile-identity {
@@ -385,22 +385,23 @@ onMounted(loadProfile)
 
 .profile-avatar {
   flex: 0 0 auto;
-  border: 4px solid rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.18);
+  border: 4px solid rgba(45, 190, 116, 0.16);
+  background: linear-gradient(135deg, var(--ac-primary), var(--ac-secondary));
   color: #fff;
   font-size: 30px;
   font-weight: 900;
 }
 
-.profile-hero h1 {
+.profile-summary-card h1 {
   margin: 0 0 10px;
-  font-size: clamp(32px, 5vw, 52px);
-  line-height: 1.06;
+  color: var(--ac-ink);
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.16;
 }
 
-.profile-hero p {
+.profile-summary-card p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--ac-muted);
   line-height: 1.7;
 }
 
@@ -604,7 +605,7 @@ onMounted(loadProfile)
 }
 
 @media (max-width: 900px) {
-  .profile-hero,
+  .profile-summary-card,
   .profile-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -616,9 +617,9 @@ onMounted(loadProfile)
 }
 
 @media (max-width: 560px) {
-  .profile-hero {
+  .profile-summary-card {
     border-radius: 16px;
-    padding: 22px;
+    padding: 18px;
   }
 
   .profile-identity {

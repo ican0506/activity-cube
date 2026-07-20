@@ -1,13 +1,13 @@
 <template>
   <section class="security-page">
-    <div class="security-hero campus-hero">
+    <div class="lite-page-head security-head">
       <div>
-        <span class="motto-badge">账号安全</span>
+        <span class="section-eyebrow">账号安全</span>
         <h1>修改登录密码</h1>
         <p>修改成功后会清除当前登录状态，请使用新密码重新登录。</p>
       </div>
       <RouterLink to="/profile">
-        <el-button class="hero-button">返回个人中心</el-button>
+        <el-button>返回个人中心</el-button>
       </RouterLink>
     </div>
 
@@ -75,39 +75,16 @@ async function submit() {
   gap: 18px;
 }
 
-.security-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-  min-height: 210px;
-  padding: clamp(22px, 4vw, 38px);
-  border-radius: 24px;
-  color: #fff;
-}
-
-.security-hero h1 {
-  margin: 0 0 10px;
-  font-size: clamp(32px, 5vw, 52px);
-  line-height: 1.06;
-}
-
-.security-hero p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-}
-
 .security-panel {
   width: min(560px, 100%);
 }
 
 @media (max-width: 560px) {
-  .security-hero {
+  .security-head {
     display: grid;
-    border-radius: 16px;
   }
 
-  .security-hero .el-button {
+  .security-head .el-button {
     width: 100%;
   }
 }

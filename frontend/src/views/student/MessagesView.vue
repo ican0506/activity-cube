@@ -1,10 +1,10 @@
 <template>
   <section>
-    <div class="campus-hero messages-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">消息中心</span>
+    <div class="lite-page-head messages-head">
+      <div>
+        <span class="section-eyebrow">消息中心</span>
         <h1>我的通知</h1>
-        <p>活动报名、签到提醒、反馈提醒和系统通知都会出现在这里。</p>
+        <p>查看活动通知、签到提醒、反馈提醒和系统通知。</p>
       </div>
       <div class="message-hero-count">
         <span>未读消息</span>
@@ -170,24 +170,12 @@ onMounted(load)
 </script>
 
 <style scoped>
-.messages-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 210px;
-  margin-bottom: 18px;
-  padding: clamp(22px, 4vw, 38px);
-  border-radius: 24px;
-  color: #ffffff;
-  box-shadow: 0 20px 60px rgba(11, 125, 59, 0.18);
-}
-
 .message-hero-count {
   min-width: 150px;
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f7fcf9;
+  border: 1px solid var(--ac-border);
 }
 
 .message-hero-count span,
@@ -197,6 +185,7 @@ onMounted(load)
 
 .message-hero-count strong {
   margin-top: 8px;
+  color: var(--ac-primary-strong);
   font-size: 34px;
 }
 
@@ -278,7 +267,7 @@ onMounted(load)
 }
 
 @media (max-width: 768px) {
-  .messages-hero,
+  .messages-head,
   .message-toolbar {
     display: grid;
     grid-template-columns: 1fr;

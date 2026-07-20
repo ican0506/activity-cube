@@ -1,17 +1,25 @@
 <template>
-  <section>
-    <div class="campus-hero">
+  <section class="ended-page">
+    <div class="lite-page-head">
       <div>
-        <span class="motto-badge">历史活动</span>
+        <span class="section-eyebrow">历史活动</span>
         <h1>已结束活动</h1>
-        <p>查看已经结束的校园活动。已报名的活动可以继续进入详情提交反馈，已签到且发放奖励后会同步到个人中心。</p>
+        <p>查看历史活动、反馈入口和已获得的活动成果。</p>
       </div>
       <RouterLink to="/profile">
-        <el-button class="hero-button">查看我的活动成果</el-button>
+        <el-button type="primary">查看我的活动成果</el-button>
       </RouterLink>
     </div>
 
-    <div v-loading="loading" class="grid activity-grid">
+    <div class="lite-section-bar">
+      <div>
+        <h2>历史活动列表</h2>
+        <p>活动结束后，可从详情页提交反馈；奖励发放后会同步到个人中心。</p>
+      </div>
+      <span>{{ activities.length }} 个活动</span>
+    </div>
+
+    <div v-loading="loading" class="grid activity-grid hall-activity-grid">
       <ActivityCard v-for="activity in activities" :key="activity.id" :activity="activity" />
     </div>
     <el-empty

@@ -1,27 +1,21 @@
 <template>
   <section class="scan-page">
-    <div class="hero campus-hero scan-hero">
+    <div class="lite-page-head scan-lite-head">
       <div>
-        <div class="motto-badge">校园活动 · 快速参与</div>
+        <span class="section-eyebrow">扫码入口</span>
         <h1>扫一扫</h1>
-        <p>扫描报名二维码或签到二维码</p>
-        <p class="scan-hero-note">请将二维码放入扫描框内，识别成功后将自动跳转。</p>
+        <p>扫描报名二维码或签到二维码，识别成功后直接进入对应流程。</p>
       </div>
-      <div class="hero-card scan-hero-card">
-        <span>扫码类型</span>
-        <strong>报名 / 签到</strong>
-        <p>{{ showFallback ? '摄像头不可用时，可使用下方备用输入方式继续。' : '进入页面后会自动打开摄像头开始识别。' }}</p>
-      </div>
+      <el-tag :type="cameraRunning ? 'success' : 'info'">{{ cameraRunning ? '识别中' : '准备中' }}</el-tag>
     </div>
 
-    <div class="scan-layout">
-      <div class="panel scan-camera-card agri-card">
+    <div class="scan-layout lite-scan-layout">
+      <div class="panel scan-camera-card">
         <div class="section-title scan-section-title">
           <div>
             <h2>摄像头扫码</h2>
-            <p>授权浏览器使用摄像头后，将二维码放入取景框。</p>
+            <p>请将二维码放入取景框内。</p>
           </div>
-          <el-tag :type="cameraRunning ? 'success' : 'info'">{{ cameraRunning ? '识别中' : '未开启' }}</el-tag>
         </div>
 
         <div class="scan-video-wrap">
@@ -44,7 +38,7 @@
         />
       </div>
 
-      <div v-if="showFallback" ref="fallbackRef" class="panel scan-manual-card agri-card">
+      <div v-if="showFallback" ref="fallbackRef" class="panel scan-manual-card">
         <div class="section-title scan-section-title">
           <div>
             <h2>备用方式</h2>

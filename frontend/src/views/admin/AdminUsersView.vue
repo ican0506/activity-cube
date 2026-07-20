@@ -1,12 +1,12 @@
 <template>
   <section>
-    <div class="campus-hero admin-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">管理员专属</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">管理员</span>
         <h1>用户管理</h1>
-        <p>统一查看学生、活动负责人和管理员账号，按角色、校区和关键词快速定位用户。</p>
+        <p>查看学生、负责人和管理员账号，支持按角色、校区和关键词筛选。</p>
       </div>
-      <el-button class="hero-button" :icon="Plus" @click="openCreateOrganizer">创建负责人账号</el-button>
+      <el-button type="primary" :icon="Plus" @click="openCreateOrganizer">创建负责人账号</el-button>
     </div>
 
     <div class="metric-row campus-overview">

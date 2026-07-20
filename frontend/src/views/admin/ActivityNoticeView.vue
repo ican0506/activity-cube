@@ -1,10 +1,10 @@
 <template>
   <section>
-    <div class="campus-hero admin-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">活动通知</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">活动通知</span>
         <h1>{{ activity?.title || '通知发布' }}</h1>
-        <p>给报名学生发送活动安排、签到提醒或反馈提醒，学生会在消息中心收到通知。</p>
+        <p>向报名学生发送活动安排、签到提醒或反馈提醒。</p>
       </div>
     </div>
 

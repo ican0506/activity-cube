@@ -1,12 +1,12 @@
 <template>
   <section>
-    <div class="hero campus-hero">
+    <div class="lite-page-head">
       <div>
-        <div class="motto-badge">填写报名信息，加入这场农大校园活动。</div>
+        <span class="section-eyebrow">活动报名</span>
         <h1>活动报名</h1>
-        <p>确认个人信息后提交报名。同一活动只能报名一次，请确保手机号和校区信息准确。</p>
+        <p>确认个人信息后提交报名。</p>
       </div>
-      <div v-if="activity" class="hero-card">
+      <div v-if="activity" class="lite-summary-card">
         <span>{{ statusText(activity.status) }}</span>
         <strong>{{ activity.title }}</strong>
         <p>{{ activity.location || '地点待定' }}</p>

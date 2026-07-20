@@ -6,7 +6,7 @@
         <p>生成活动报名码和签到码，用于海报、现场展板或班级群转发。</p>
       </div>
       <RouterLink v-if="activity?.id" :to="`/admin/activities/${activity?.id}/checkins`">
-        <el-button class="hero-button" :icon="Checked">查看签到名单</el-button>
+        <el-button type="primary" :icon="Checked">查看签到名单</el-button>
       </RouterLink>
     </div>
 
