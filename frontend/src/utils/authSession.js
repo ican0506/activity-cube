@@ -43,3 +43,9 @@ export function normalizeLoginTarget(target, fallback = DEFAULT_LOGIN_TARGET) {
   if (!value || typeof value !== 'string') return fallback
   return value.startsWith('/') && !value.startsWith('//') ? value : fallback
 }
+
+export function defaultTargetForRole(role) {
+  if (role === 'admin') return '/admin/activities'
+  if (role === 'organizer') return '/admin/activities'
+  return DEFAULT_LOGIN_TARGET
+}

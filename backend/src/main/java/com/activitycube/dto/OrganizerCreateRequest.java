@@ -6,13 +6,14 @@ import lombok.Data;
 
 @Data
 public class OrganizerCreateRequest {
-    @NotBlank
     private String username;
     @NotBlank
     private String password;
     @NotBlank
     private String realName;
     private String studentNo;
+    @NotBlank
+    private String workNo;
     @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
     @NotBlank

@@ -6,6 +6,7 @@ import com.activitycube.entity.Activity;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.RegistrationMapper;
+import com.activitycube.mapper.CheckinMapper;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -20,7 +21,10 @@ import static org.mockito.Mockito.when;
 class RegistrationServiceTest {
     private final RegistrationMapper registrationMapper = mock(RegistrationMapper.class);
     private final ActivityService activityService = mock(ActivityService.class);
-    private final RegistrationService registrationService = new RegistrationService(registrationMapper, activityService);
+    private final CheckinMapper checkinMapper = mock(CheckinMapper.class);
+    private final OperationLogService operationLogService = mock(OperationLogService.class);
+    private final NoticeService noticeService = mock(NoticeService.class);
+    private final RegistrationService registrationService = new RegistrationService(registrationMapper, activityService, checkinMapper, operationLogService, noticeService);
 
     @Test
     void rejectsRegistrationBeforeRegistrationStartTime() {
@@ -57,6 +61,52 @@ class RegistrationServiceTest {
                 .hasMessage("你已报名，请勿重复提交");
 
         verify(registrationMapper, never()).insert(any(Registration.class));
+    }
+
+    @Test
+    void sendsNoticeAfterSuccessfulRegistration() {
+        Activity activity = activity(LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(1));
+        activity.setTitle("校园讲座");
+        User student = user();
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+
+        Registration registration = registrationService.register(1L, request(), student);
+
+        verify(registrationMapper).insert(registration);
+        verify(noticeService).notifyRegistrationSuccess(activity, registration, student);
+    }
+
+    @Test
+    void cancelsOwnRegistrationBeforeDeadlineWhenNotCheckedIn() {
+        Activity activity = activity(LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(1));
+        Registration registration = new Registration();
+        registration.setId(12L);
+        registration.setActivityId(1L);
+        registration.setUserId(3L);
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(registration);
+        when(checkinMapper.selectCount(any())).thenReturn(0L);
+
+        registrationService.cancelMyRegistration(1L, user());
+
+        verify(registrationMapper).deleteById(12L);
+        verify(operationLogService).record(user(), "cancel_registration", "registration", 12L, "取消报名：null");
+    }
+
+    @Test
+    void rejectsCancellationAfterStudentHasCheckedIn() {
+        Activity activity = activity(LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(1));
+        Registration registration = new Registration();
+        registration.setId(12L);
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(registration);
+        when(checkinMapper.selectCount(any())).thenReturn(1L);
+
+        assertThatThrownBy(() -> registrationService.cancelMyRegistration(1L, user()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("已完成签到，不能取消报名");
+        verify(registrationMapper, never()).deleteById(12L);
     }
 
     private Activity activity(LocalDateTime registerStartTime, LocalDateTime registerEndTime) {

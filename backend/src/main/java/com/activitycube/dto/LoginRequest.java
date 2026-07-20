@@ -1,12 +1,24 @@
 package com.activitycube.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class LoginRequest {
-    @NotBlank
     private String username;
-    @NotBlank
+    private String studentNo;
+    private String workNo;
     private String password;
+
+    public String resolveIdentifier() {
+        if (username != null && !username.isBlank()) {
+            return username.trim();
+        }
+        if (studentNo != null && !studentNo.isBlank()) {
+            return studentNo.trim();
+        }
+        if (workNo != null && !workNo.isBlank()) {
+            return workNo.trim();
+        }
+        return "";
+    }
 }

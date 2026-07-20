@@ -7,6 +7,7 @@ import {
   applyAuthHeader,
   buildLoginRedirect,
   clearAuthSession,
+  defaultTargetForRole,
   normalizeLoginTarget,
   persistAuthSession
 } from './authSession.js'
@@ -62,4 +63,11 @@ test('normalizes login redirect query target', () => {
   assert.equal(normalizeLoginTarget(['/activities/8/checkin']), '/activities/8/checkin')
   assert.equal(normalizeLoginTarget('https://example.com/evil'), '/activities')
   assert.equal(normalizeLoginTarget(''), '/activities')
+})
+
+test('chooses default login target by role when redirect is absent', () => {
+  assert.equal(defaultTargetForRole('student'), '/activities')
+  assert.equal(defaultTargetForRole('user'), '/activities')
+  assert.equal(defaultTargetForRole('organizer'), '/admin/activities')
+  assert.equal(defaultTargetForRole('admin'), '/admin/activities')
 })

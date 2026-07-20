@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,7 +18,9 @@ public class Activity {
     private String description;
     private String coverUrl;
     private String activityMode;
+    private String activityCategory;
     private String checkinCode;
+    private String rejectReason;
     private String campus;
     private String location;
     private LocalDateTime startTime;
@@ -28,7 +31,14 @@ public class Activity {
     private LocalDateTime checkinEndTime;
     private Integer maxParticipants;
     private Boolean allowCrossCampus;
+    private Boolean rewardEnabled;
+    private String rewardType;
+    private BigDecimal rewardHours;
+    private Integer rewardPoints;
+    private String rewardDescription;
     private String status;
+    @TableField(exist = false)
+    private String reviewStatus;
     private Long creatorId;
     @TableField("create_time")
     private LocalDateTime createdAt;

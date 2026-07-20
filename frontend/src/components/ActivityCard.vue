@@ -11,31 +11,31 @@
     <div class="activity-card-body">
       <div class="activity-card-top">
         <h3>{{ activity.title }}</h3>
-        <el-tag size="small" :type="statusTagType(activity.status)">
-          {{ statusText(activity.status) }}
+        <el-tag size="small" :type="studentActivityStatusTagType(activity)">
+          {{ studentActivityStatusText(activity) }}
         </el-tag>
       </div>
 
-      <p class="activity-summary">{{ activity.description || '活动介绍正在完善，点击查看时间、地点和报名安排。' }}</p>
-
-      <div class="meta-row">
-        <span class="meta-item">
-          <el-icon><Location /></el-icon>
-          {{ activity.location || '地点待定' }}
-        </span>
-        <span class="meta-item">
+      <div class="activity-fact-list">
+        <span>
           <el-icon><Calendar /></el-icon>
           {{ activity.startTime || '时间待定' }}
         </span>
+        <span>
+          <el-icon><Location /></el-icon>
+          {{ activityLocationText(activity) }}
+        </span>
+        <span>
+          <el-icon><School /></el-icon>
+          {{ activityCampusText(activity) }}
+        </span>
       </div>
 
-      <div class="meta-row">
-        <span class="meta-item">
-          <el-icon><UserFilled /></el-icon>
-          报名上限 {{ activity.maxParticipants || '不限' }}
-        </span>
+      <div class="activity-card-tags">
         <span class="wheat-badge">{{ activityModeText(activity) }}</span>
+        <span class="wheat-badge">{{ activityCategoryText(activity) }}</span>
       </div>
+      <p v-if="activity.rewardEnabled" class="page-subtitle">活动奖励：{{ rewardSummary(activity) }}</p>
 
       <div class="activity-actions">
         <RouterLink :to="`/activities/${activity.id}`">
@@ -55,9 +55,19 @@
 </template>
 
 <script setup>
-import { Calendar, Location, Right, School, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { Calendar, Location, Right, School, Tickets } from '@element-plus/icons-vue'
 import { resolveFileUrl } from '../api/file'
-import { activityModeText, canRegister, registerDisabledReason, statusTagType, statusText } from '../utils/options'
+import {
+  activityCampusText,
+  activityCategoryText,
+  activityLocationText,
+  activityModeText,
+  canRegister,
+  registerDisabledReason,
+  rewardSummary,
+  studentActivityStatusTagType,
+  studentActivityStatusText
+} from '../utils/options'
 
 defineProps({
   activity: {

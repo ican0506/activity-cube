@@ -1,14 +1,13 @@
 <template>
   <section>
-    <div class="campus-hero admin-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">校园活动中枢</span>
-        <h1>活动管理</h1>
-        <p>面向龙子湖、文化路、许昌三校区，统一管理活动发布、扫码签到、名单导出、抽签分组和反馈复盘。</p>
+    <div class="lite-page-head">
+      <div>
+        <h1>活动管理中心</h1>
       </div>
-      <RouterLink to="/admin/activities/create">
-        <el-button class="hero-button" :icon="Plus">创建活动</el-button>
-      </RouterLink>
+      <div class="button-row">
+        <RouterLink v-if="userStore.canAdmin" to="/admin/activity-reviews"><el-button>待审核活动</el-button></RouterLink>
+        <RouterLink to="/admin/activities/create"><el-button type="primary" :icon="Plus">创建活动</el-button></RouterLink>
+      </div>
     </div>
 
     <div class="metric-row campus-overview">
@@ -38,6 +37,14 @@
             <el-tag :type="statusTagType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="reviewStatus" label="审核状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="statusTagType(row.reviewStatus || row.status)">{{ statusText(row.reviewStatus || row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审核意见" min-width="160">
+          <template #default="{ row }">{{ row.rejectReason || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="startTime" label="开始时间" min-width="170" />
         <el-table-column label="常用操作" width="260">
           <template #default="{ row }">
@@ -63,8 +70,10 @@
                   <el-dropdown-menu>
                     <el-dropdown-item command="registrations">报名名单</el-dropdown-item>
                     <el-dropdown-item command="checkins">签到名单</el-dropdown-item>
+                    <el-dropdown-item command="notices">活动通知</el-dropdown-item>
                     <el-dropdown-item command="lottery">随机抽奖</el-dropdown-item>
                     <el-dropdown-item command="tools">抽签分组</el-dropdown-item>
+                    <el-dropdown-item command="rewards">发放奖励</el-dropdown-item>
                     <el-dropdown-item command="feedbacks">反馈统计</el-dropdown-item>
                     <el-dropdown-item divided command="delete">删除活动</el-dropdown-item>
                   </el-dropdown-menu>
@@ -82,14 +91,16 @@
               <span class="wheat-badge">{{ row.campus || '全校区' }}</span>
               <h3>{{ row.title }}</h3>
               <p class="page-subtitle">{{ row.startTime || '时间待定' }}</p>
+              <p v-if="row.rejectReason" class="page-subtitle">驳回原因：{{ row.rejectReason }}</p>
             </div>
-            <el-tag :type="statusTagType(row.status)">{{ statusText(row.status) }}</el-tag>
+            <el-tag :type="statusTagType(row.reviewStatus || row.status)">{{ statusText(row.reviewStatus || row.status) }}</el-tag>
           </div>
           <div class="button-row">
             <RouterLink :to="`/admin/activities/${row.id}/edit`"><el-button size="small">编辑</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/qrcodes`"><el-button size="small" type="primary">二维码</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/registrations`"><el-button size="small">报名</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/checkins`"><el-button size="small">签到</el-button></RouterLink>
+            <RouterLink :to="`/admin/activities/${row.id}/notices`"><el-button size="small">通知</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/lottery`"><el-button size="small">抽奖</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/tools`"><el-button size="small">分组</el-button></RouterLink>
             <RouterLink :to="`/admin/activities/${row.id}/feedbacks`"><el-button size="small">反馈</el-button></RouterLink>
@@ -112,6 +123,7 @@ import { deleteActivity, listActivities } from '../../api/activity'
 import { listCheckins } from '../../api/checkin'
 import { listFeedbacks } from '../../api/feedback'
 import { listRegistrations } from '../../api/registration'
+import { issueActivityRewards } from '../../api/reward'
 import { useUserStore } from '../../stores/user'
 import { statusTagType, statusText } from '../../utils/options'
 
@@ -167,7 +179,17 @@ async function handleCommand(command, row) {
     await remove(row.id)
     return
   }
+  if (command === 'rewards') {
+    await issueRewards(row)
+    return
+  }
   router.push(`/admin/activities/${row.id}/${command}`)
+}
+
+async function issueRewards(row) {
+  await ElMessageBox.confirm('确认给该活动已签到学生发放奖励？未签到学生不会获得奖励。', '发放奖励')
+  const issued = await issueActivityRewards(row.id)
+  ElMessage.success(`已发放 ${issued.length} 条活动奖励`)
 }
 
 async function remove(id) {

@@ -17,4 +17,8 @@ public class Checkin {
     private Long registrationId;
     private LocalDateTime checkinTime;
     private String campus;
+    private String checkinType;
+    private Long operatorId;
+    private String operatorName;
+    private String remark;
 }

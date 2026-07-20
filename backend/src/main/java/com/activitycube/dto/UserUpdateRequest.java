@@ -9,6 +9,11 @@ public class UserUpdateRequest {
     @NotBlank
     private String realName;
     private String studentNo;
+    private String workNo;
+    private String gradeYear;
+    private String majorCode;
+    private String majorName;
+    private String className;
     @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
     @Pattern(regexp = "龙子湖校区|文化路校区|许昌校区", message = "只能选择龙子湖校区、文化路校区或许昌校区")

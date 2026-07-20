@@ -6,6 +6,10 @@ export function checkinActivity(id, code) {
   })
 }
 
+export function manualCheckinActivity(id, data) {
+  return request.post(`/activities/${id}/checkins/manual`, data)
+}
+
 export function listCheckins(id) {
   return request.get(`/activities/${id}/checkins`)
 }

@@ -1,0 +1,3 @@
+-- Keep an IDE-friendly copy under backend resources.
+-- Use sql/activity_cube_final.sql in Navicat to initialize a fresh activity_cube database.
+-- Existing databases should run docs/sql patch files instead of dropping data.

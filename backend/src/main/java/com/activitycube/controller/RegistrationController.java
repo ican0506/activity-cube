@@ -8,6 +8,7 @@ import com.activitycube.util.AuthUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,5 +35,11 @@ public class RegistrationController {
     @GetMapping("/api/my/registrations")
     public Result<List<Registration>> myRegistrations() {
         return Result.success(registrationService.myRegistrations(AuthUtil.requireUser()));
+    }
+
+    @DeleteMapping("/api/activities/{id}/registrations/me")
+    public Result<Void> cancelMyRegistration(@PathVariable Long id) {
+        registrationService.cancelMyRegistration(id, AuthUtil.requireUser());
+        return Result.success();
     }
 }

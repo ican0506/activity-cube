@@ -22,6 +22,14 @@ public class Registration {
     private String phone;
     private String campus;
     private String remark;
+    @TableField(exist = false)
+    private String activityTitle;
+    @TableField(exist = false)
+    private String activityStatus;
+    @TableField(exist = false)
+    private Boolean canCancel;
+    @TableField(exist = false)
+    private String cancelReason;
     @TableField("create_time")
     private LocalDateTime createdAt;
 }

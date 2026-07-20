@@ -52,4 +52,38 @@ class FileServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("仅支持");
     }
+
+    @Test
+    void storesAvatarUnderAvatarDirectory() throws Exception {
+        FileService fileService = new FileService(uploadRoot.toString());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "头像.png",
+                "image/png",
+                new byte[]{1, 2, 3}
+        );
+
+        var result = fileService.uploadAvatar(file);
+
+        assertThat(result.getUrl()).startsWith("/uploads/avatar/");
+        assertThat(result.getFileName()).endsWith(".png");
+        assertThat(result.getFileType()).isEqualTo("image");
+        assertThat(Files.exists(uploadRoot.resolve(result.getUrl().replace("/uploads/", "").replace("/", java.io.File.separator))))
+                .isTrue();
+    }
+
+    @Test
+    void rejectsGifAvatar() {
+        FileService fileService = new FileService(uploadRoot.toString());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.gif",
+                "image/gif",
+                new byte[]{1, 2, 3}
+        );
+
+        assertThatThrownBy(() -> fileService.uploadAvatar(file))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("头像只支持 jpg、jpeg、png、webp 图片");
+    }
 }

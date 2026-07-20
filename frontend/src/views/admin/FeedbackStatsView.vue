@@ -1,13 +1,13 @@
 <template>
   <section>
-    <div class="campus-hero feedback-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">活动声音墙 · 满意度看板</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">反馈统计</span>
         <h1>{{ activity?.title || '反馈统计' }}</h1>
-        <p>你的反馈会帮助活动越办越好。这里集中展示评分分布、文字建议和图片视频附件。</p>
+        <p>查看评分分布、文字建议和图片视频附件。</p>
       </div>
       <RouterLink to="/admin/activities">
-        <el-button class="hero-button">返回活动管理</el-button>
+        <el-button>返回活动管理</el-button>
       </RouterLink>
     </div>
 

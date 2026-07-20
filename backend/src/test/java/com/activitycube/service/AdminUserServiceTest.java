@@ -18,7 +18,9 @@ import static org.mockito.Mockito.when;
 
 class AdminUserServiceTest {
     private final UserMapper userMapper = mock(UserMapper.class);
-    private final AdminUserService adminUserService = new AdminUserService(userMapper);
+    private final OperationLogService operationLogService = mock(OperationLogService.class);
+    private final PasswordService passwordService = new PasswordService();
+    private final AdminUserService adminUserService = new AdminUserService(userMapper, operationLogService, passwordService);
 
     @Test
     void rejectsListByNonAdmin() {
@@ -33,16 +35,22 @@ class AdminUserServiceTest {
         when(userMapper.selectById(9L)).thenReturn(existing);
         UserUpdateRequest request = new UserUpdateRequest();
         request.setRealName("新姓名");
-        request.setStudentNo("20240001");
+        request.setStudentNo("2321241389");
         request.setPhone("13800000000");
         request.setCampus("文化路校区");
         request.setCollege("信息工程学院");
+        request.setMajorName("软件工程");
+        request.setClassName("软件工程2301");
         request.setRole("student");
 
         User updated = adminUserService.update(9L, request, admin());
 
         assertThat(updated.getPassword()).isNull();
         assertThat(updated.getRealName()).isEqualTo("新姓名");
+        assertThat(updated.getGradeYear()).isEqualTo("2023级");
+        assertThat(updated.getMajorCode()).isEqualTo("21241");
+        assertThat(updated.getMajorName()).isEqualTo("软件工程");
+        assertThat(updated.getClassName()).isEqualTo("软件工程2301");
         assertThat(updated.getRole()).isEqualTo("student");
         verify(userMapper).updateById(existing);
     }
@@ -70,7 +78,8 @@ class AdminUserServiceTest {
 
         adminUserService.resetPassword(9L, request, admin());
 
-        assertThat(existing.getPassword()).isEqualTo("new123456");
+        assertThat(existing.getPassword()).isNotEqualTo("new123456");
+        assertThat(passwordService.matches("new123456", existing.getPassword())).isTrue();
         verify(userMapper).updateById(existing);
     }
 

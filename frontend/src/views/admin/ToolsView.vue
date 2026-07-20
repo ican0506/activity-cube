@@ -1,13 +1,13 @@
 <template>
   <section>
-    <div class="campus-hero tools-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">活动工具箱 · 智能组织</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">活动工具箱</span>
         <h1>抽签分组工具箱</h1>
-        <p>从报名名单或签到名单中快速抽取人员，也可以按组数或每组人数自动随机分组。</p>
+        <p>从报名名单或签到名单中抽签，也可以按组数或每组人数随机分组。</p>
       </div>
       <RouterLink to="/admin/activities">
-        <el-button class="hero-button">返回活动管理</el-button>
+        <el-button>返回活动管理</el-button>
       </RouterLink>
     </div>
 

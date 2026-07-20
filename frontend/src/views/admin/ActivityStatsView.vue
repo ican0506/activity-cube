@@ -1,12 +1,12 @@
 <template>
   <section v-loading="loading">
-    <div class="campus-hero stats-campus-hero">
-      <div class="hero-copy">
-        <span class="motto-badge">农业科技 · 活动复盘</span>
+    <div class="lite-page-head">
+      <div>
+        <span class="section-eyebrow">数据统计</span>
         <h1>{{ activity?.title || '活动数据统计' }}</h1>
-        <p>从报名到签到，从参与到反馈，每一步都有迹可循。</p>
+        <p>查看报名、签到、反馈和未签到名单。</p>
       </div>
-      <el-button class="hero-button" @click="downloadAbsentees">导出未签到名单</el-button>
+      <el-button type="primary" @click="downloadAbsentees">导出未签到名单</el-button>
     </div>
 
     <div class="metric-row">
@@ -85,6 +85,7 @@ import { listAbsentees } from '../../api/checkin'
 import { getFeedbackStats } from '../../api/feedback'
 import { getActivityStats } from '../../api/stat'
 import { exportRosterExcel } from '../../utils/excelExport'
+import { recordFrontendExport } from '../../api/export'
 
 const route = useRoute()
 const stats = ref({})
@@ -162,6 +163,7 @@ async function downloadAbsentees() {
     suffix: '未签到名单',
     registrations: absentees
   })
+  await recordFrontendExport(route.params.id, 'absences')
   ElMessage.success('未签到名单已导出')
 }
 

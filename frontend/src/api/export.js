@@ -9,3 +9,7 @@ export async function downloadExport(activityId, type) {
   link.click()
   URL.revokeObjectURL(url)
 }
+
+export function recordFrontendExport(activityId, type) {
+  return request.post(`/activities/${activityId}/export-log/${type}`)
+}

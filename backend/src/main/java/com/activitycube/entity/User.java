@@ -16,12 +16,19 @@ public class User {
     private String username;
     private String password;
     private String realName;
+    private String avatarUrl;
     private String studentNo;
+    private String workNo;
+    private String gradeYear;
+    private String majorCode;
+    private String majorName;
     private String role;
     private String campus;
     private String college;
+    private String className;
     private String majorClass;
     private String phone;
+    private String bio;
     private Integer status;
     @TableField("create_time")
     private LocalDateTime createdAt;

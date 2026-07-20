@@ -8,6 +8,7 @@ import com.activitycube.dto.UserUpdateRequest;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.UserMapper;
 import com.activitycube.util.AuthUtil;
+import com.activitycube.util.StudentNoUtil;
 import com.activitycube.vo.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,6 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminUserService {
     private final UserMapper userMapper;
+    private final OperationLogService operationLogService;
+    private final PasswordService passwordService;
 
     public PageResult<User> list(String keyword, String role, String campus, Integer status, long page, long size, User operator) {
         requireAdmin(operator);
@@ -32,6 +35,7 @@ public class AdminUserService {
                     .like(User::getUsername, keyword)
                     .or().like(User::getRealName, keyword)
                     .or().like(User::getStudentNo, keyword)
+                    .or().like(User::getWorkNo, keyword)
                     .or().like(User::getPhone, keyword));
         }
         String normalizedRole = normalizeRoleFilter(role);
@@ -62,6 +66,21 @@ public class AdminUserService {
         User user = requireUser(id);
         user.setRealName(request.getRealName());
         user.setStudentNo(request.getStudentNo());
+        user.setWorkNo(request.getWorkNo());
+        if (StringUtils.hasText(request.getStudentNo())) {
+            StudentNoUtil.ParsedStudentNo parsed = StudentNoUtil.parse(request.getStudentNo());
+            user.setGradeYear(parsed.gradeYear());
+            user.setMajorCode(parsed.majorCode());
+            user.setMajorName(StringUtils.hasText(parsed.majorName()) ? parsed.majorName() : request.getMajorName());
+        } else {
+            user.setGradeYear(request.getGradeYear());
+            user.setMajorCode(request.getMajorCode());
+            user.setMajorName(request.getMajorName());
+        }
+        user.setClassName(request.getClassName());
+        if (StringUtils.hasText(request.getMajorName()) && StringUtils.hasText(request.getClassName())) {
+            user.setMajorClass(request.getMajorName() + request.getClassName());
+        }
         user.setPhone(request.getPhone());
         user.setCampus(request.getCampus());
         user.setCollege(request.getCollege());
@@ -84,6 +103,8 @@ public class AdminUserService {
         user.setStatus(request.getStatus());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
+        operationLogService.record(operator, "update_user_status", "user", id,
+                (request.getStatus() == 1 ? "启用用户：" : "禁用用户：") + user.getUsername());
         return sanitize(user);
     }
 
@@ -93,7 +114,7 @@ public class AdminUserService {
             throw new BusinessException("新密码不能为空");
         }
         User user = requireUser(id);
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordService.encode(request.getPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
     }
