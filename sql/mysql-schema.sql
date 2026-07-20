@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '用户ID',
   `username` VARCHAR(50) NOT NULL COMMENT '登录账号',
-  `password` VARCHAR(100) NOT NULL COMMENT '登录密码，MVP阶段可明文，正式环境必须加密',
+  `password` VARCHAR(100) NOT NULL COMMENT 'BCrypt加密后的登录密码',
   `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
   `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学号或工号',
   `role` VARCHAR(20) NOT NULL COMMENT '用户角色：user学生/organizer活动负责人/admin管理员',
@@ -137,11 +137,11 @@ CREATE TABLE `feedback` (
 INSERT INTO `user`
 (`id`, `username`, `password`, `real_name`, `student_no`, `role`, `campus`, `college`, `major_class`, `phone`, `status`)
 VALUES
-(1, 'admin', '123456', '系统管理员', 'A0001', 'admin', '龙子湖校区', '信息化办公室', '系统管理', '13800000000', 1),
-(2, 'organizer001', '123456', '活动负责人', 'T2024001', 'organizer', '龙子湖校区', '校团委', '活动管理', '13800000001', 1),
-(3, 'student001', '123456', '张三', '2024001', 'user', '龙子湖校区', '信息工程学院', '软件工程2401', '13800000002', 1),
-(4, 'student002', '123456', '李四', '2024002', 'user', '文化路校区', '文法学院', '汉语言2401', '13800000003', 1),
-(5, 'student003', '123456', '王五', '2024003', 'user', '许昌校区', '商学院', '工商管理2401', '13800000004', 1);
+(1, 'admin', '$2a$10$vHy2YvnwV3xaH2q0VDxeg.kD5L494cwItw3USN38.QADZevM5.Qli', '系统管理员', 'A0001', 'admin', '龙子湖校区', '信息化办公室', '系统管理', '13800000000', 1),
+(2, 'organizer001', '$2a$10$vHy2YvnwV3xaH2q0VDxeg.kD5L494cwItw3USN38.QADZevM5.Qli', '活动负责人', 'T2024001', 'organizer', '龙子湖校区', '校团委', '活动管理', '13800000001', 1),
+(3, 'student001', '$2a$10$vHy2YvnwV3xaH2q0VDxeg.kD5L494cwItw3USN38.QADZevM5.Qli', '张三', '2024001', 'user', '龙子湖校区', '信息工程学院', '软件工程2401', '13800000002', 1),
+(4, 'student002', '$2a$10$vHy2YvnwV3xaH2q0VDxeg.kD5L494cwItw3USN38.QADZevM5.Qli', '李四', '2024002', 'user', '文化路校区', '文法学院', '汉语言2401', '13800000003', 1),
+(5, 'student003', '$2a$10$vHy2YvnwV3xaH2q0VDxeg.kD5L494cwItw3USN38.QADZevM5.Qli', '王五', '2024003', 'user', '许昌校区', '商学院', '工商管理2401', '13800000004', 1);
 
 -- 测试活动
 INSERT INTO `activity`
