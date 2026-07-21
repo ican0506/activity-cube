@@ -34,7 +34,9 @@
           <el-tooltip v-else-if="isOnlineActivity(detail.activity)" :content="checkinDisabledReason(detail.activity)" placement="top">
             <span><el-button :icon="Checked" disabled>去签到</el-button></span>
           </el-tooltip>
-          <span v-else class="offline-checkin-tip">线下扫码签到</span>
+          <RouterLink v-else to="/scan">
+            <el-button :icon="Camera">线下扫码签到</el-button>
+          </RouterLink>
 
           <RouterLink v-if="canFeedback(detail.activity)" :to="`/activities/${id}/feedback`">
             <el-button :icon="ChatDotRound">活动反馈</el-button>
@@ -122,7 +124,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import QRCode from 'qrcode'
-import { Calendar, ChatDotRound, Checked, EditPen, Location } from '@element-plus/icons-vue'
+import { Calendar, Camera, ChatDotRound, Checked, EditPen, Location } from '@element-plus/icons-vue'
 import { getActivity } from '../api/activity'
 import { resolveFileUrl } from '../api/file'
 import { listActivityMedia } from '../api/media'

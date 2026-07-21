@@ -424,18 +424,6 @@ a {
   box-shadow: 0 10px 22px rgba(11, 125, 59, 0.14);
 }
 
-.offline-checkin-tip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid rgba(11, 125, 59, 0.14);
-  border-radius: 999px;
-  background: rgba(45, 190, 116, 0.1);
-  color: var(--ac-primary-strong);
-  font-size: 14px;
-  font-weight: 700;
-}
 
 .hero-button.el-button:hover,
 .hero-button.el-button:focus {

@@ -4,11 +4,16 @@ server:
 spring:
   application:
     name: activity-cube
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:activity_cube}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+#    username: ${DB_USER:root}
+#    password: "${DB_PASSWORD:root123}"
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:activity_cube}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USER:root}
-    password: "${DB_PASSWORD:root123}"
+    url: jdbc:mysql://localhost:3306/activity_cube?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: J03102212
   flyway:
     enabled: ${FLYWAY_ENABLED:false}
     baseline-on-migrate: true
