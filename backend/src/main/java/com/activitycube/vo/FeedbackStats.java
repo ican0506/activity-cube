@@ -8,6 +8,9 @@ import java.util.Map;
 public class FeedbackStats {
     private Long activityId;
     private Long feedbackCount;
+    private Long suggestionCount;
+    private Long issueCount;
+    private Long evaluationCount;
     private Double averageScore;
     private Map<Integer, Long> scoreDistribution;
 }

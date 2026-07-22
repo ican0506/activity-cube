@@ -23,7 +23,7 @@
           v-for="item in quickCampuses"
           :key="item"
           class="filter-chip"
-          :class="{ active: filters.campus === item }"
+          :class="{ active: filters.scope === item }"
           type="button"
           @click="setCampus(item)"
         >

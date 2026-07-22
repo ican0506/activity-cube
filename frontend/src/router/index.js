@@ -15,6 +15,7 @@ const routes = [
   { path: '/activities/:id/checkin', component: () => import('../views/student/CheckinView.vue'), meta: { requiresAuth: true } },
   { path: '/activities/:id/feedback', component: () => import('../views/student/FeedbackView.vue'), meta: { requiresAuth: true } },
   { path: '/messages', component: () => import('../views/student/MessagesView.vue'), meta: { requiresAuth: true } },
+  { path: '/my-activities', component: () => import('../views/student/MyActivitiesView.vue'), meta: { requiresAuth: true, requiresStudent: true } },
   { path: '/my/registrations', component: () => import('../views/student/MyRegistrationsView.vue'), meta: { requiresAuth: true } },
   { path: '/my/checkins', component: () => import('../views/student/MyCheckinsView.vue'), meta: { requiresAuth: true } },
   { path: '/profile', component: () => import('../views/student/ProfileView.vue'), meta: { requiresAuth: true, requiresStudent: true } },

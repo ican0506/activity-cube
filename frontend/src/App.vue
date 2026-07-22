@@ -24,7 +24,7 @@
 
         <div class="user-box">
           <template v-if="userStore.isLogin">
-            <el-tooltip content="扫一扫" placement="bottom">
+            <el-tooltip v-if="showScanShortcut" content="扫一扫" placement="bottom">
               <el-button
                 class="scan-shortcut-button"
                 :icon="Camera"
@@ -45,10 +45,6 @@
                 <el-dropdown-menu>
                   <template v-if="isStudent">
                     <el-dropdown-item command="/profile">个人中心</el-dropdown-item>
-                    <el-dropdown-item command="/my/registrations">我的报名</el-dropdown-item>
-                    <el-dropdown-item command="/my/checkins">我的签到</el-dropdown-item>
-                    <el-dropdown-item command="/activities/ended">已结束活动</el-dropdown-item>
-                    <el-dropdown-item command="/profile#rewards">我的活动成果</el-dropdown-item>
                     <el-dropdown-item command="/profile/security">账号安全</el-dropdown-item>
                     <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
                   </template>
@@ -74,10 +70,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from './stores/user'
-import { navItemsForRole } from './utils/navigation'
+import { navItemsForRole, shouldShowScanShortcut } from './utils/navigation'
 import { getUnreadMessageCount } from './api/message'
 import { resolveFileUrl } from './api/file'
 import { defaultTargetForRole } from './utils/authSession'
@@ -90,10 +86,10 @@ const userStore = useUserStore()
 const isAuthPage = computed(() => route.path === '/login' || route.path === '/register')
 const unreadCount = ref(0)
 const navItems = computed(() => {
-  const items = userStore.isLogin ? navItemsForRole(userStore.role) : [{ label: '活动大厅', to: '/activities' }]
-  return items.filter((item) => item.to !== '/scan')
+  return userStore.isLogin ? navItemsForRole(userStore.role) : [{ label: '活动大厅', to: '/activities' }]
 })
 const isStudent = computed(() => ['student', 'user'].includes(userStore.role))
+const showScanShortcut = computed(() => shouldShowScanShortcut(userStore.role))
 const displayName = computed(() => userStore.userInfo?.realName || userStore.userInfo?.username || '用户')
 const userInitial = computed(() => displayName.value.slice(0, 1))
 const currentAvatarUrl = computed(() => resolveFileUrl(userStore.userInfo?.avatarUrl))
@@ -133,5 +129,11 @@ function goScan() {
 
 watch(() => route.fullPath, loadUnreadCount)
 watch(() => userStore.isLogin, loadUnreadCount)
-onMounted(loadUnreadCount)
+onMounted(() => {
+  loadUnreadCount()
+  window.addEventListener('activity-cube:messages-updated', loadUnreadCount)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('activity-cube:messages-updated', loadUnreadCount)
+})
 </script>

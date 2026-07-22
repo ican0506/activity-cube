@@ -23,9 +23,9 @@
         show-icon
       />
       <el-alert
-        v-if="activity && !isOnlineActivity(activity) && !checkinCode"
+        v-if="activity && requiresQrCode && !checkinCode"
         class="qr-tip"
-        title="线下活动需扫描现场签到二维码"
+        title="该活动需现场扫码签到"
         type="warning"
         :closable="false"
         show-icon
@@ -46,7 +46,7 @@
       </div>
       <el-result icon="success" title="签到确认" sub-title="确认无误后点击按钮，系统才会写入签到记录。">
         <template #extra>
-          <el-button type="primary" :disabled="checked || (activity && (!canCheckin(activity) || (!isOnlineActivity(activity) && !checkinCode)))" :loading="submitting" @click="submit">确认签到</el-button>
+          <el-button type="primary" :disabled="checked || submitDisabled" :loading="submitting" @click="submit">确认签到</el-button>
           <RouterLink :to="`/activities/${route.params.id}`">
             <el-button>返回详情</el-button>
           </RouterLink>
@@ -62,7 +62,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getActivity } from '../../api/activity'
 import { checkinActivity } from '../../api/checkin'
-import { canCheckin, checkinDisabledReason, isOnlineActivity, statusText } from '../../utils/options'
+import { canCheckin, checkinDisabledReason, normalizedCheckinMode, statusText } from '../../utils/options'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,6 +71,12 @@ const loading = ref(false)
 const submitting = ref(false)
 const checked = ref(false)
 const checkinCode = computed(() => String(route.query.code || ''))
+const requiresQrCode = computed(() => normalizedCheckinMode(activity.value) === 'qr')
+const submitDisabled = computed(() => {
+  if (!activity.value) return true
+  if (!canCheckin(activity.value)) return true
+  return requiresQrCode.value && !checkinCode.value
+})
 
 async function submit() {
   if (activity.value && !canCheckin(activity.value)) {

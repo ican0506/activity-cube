@@ -15,6 +15,7 @@ public class ActivityRequest {
     private String description;
     private String coverUrl;
     private String activityMode;
+    private String checkinMode;
     private String activityCategory;
     @NotBlank
     private String campus;

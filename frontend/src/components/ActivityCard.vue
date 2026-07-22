@@ -34,6 +34,7 @@
       <div class="activity-card-tags">
         <span class="wheat-badge">{{ activityModeText(activity) }}</span>
         <span class="wheat-badge">{{ activityCategoryText(activity) }}</span>
+        <span class="wheat-badge">报名 {{ registrationCountText(activity) }}</span>
       </div>
       <p v-if="activity.rewardEnabled" class="page-subtitle">活动奖励：{{ rewardSummary(activity) }}</p>
 
@@ -41,12 +42,12 @@
         <RouterLink :to="`/activities/${activity.id}`">
           <el-button type="primary" :icon="Tickets">查看详情</el-button>
         </RouterLink>
-        <RouterLink v-if="canRegister(activity)" :to="`/activities/${activity.id}/register`">
-          <el-button :icon="Right">立即报名</el-button>
+        <RouterLink v-if="action.to !== 'none'" :to="actionTarget">
+          <el-button :type="action.type" :icon="Right" :disabled="action.disabled">{{ action.label }}</el-button>
         </RouterLink>
-        <el-tooltip v-else :content="registerDisabledReason(activity)" placement="top">
+        <el-tooltip v-else :content="action.label" placement="top">
           <span>
-            <el-button :icon="Right" disabled>立即报名</el-button>
+            <el-button :type="action.type" :icon="Right" disabled>{{ action.label }}</el-button>
           </span>
         </el-tooltip>
       </div>
@@ -56,23 +57,38 @@
 
 <script setup>
 import { Calendar, Location, Right, School, Tickets } from '@element-plus/icons-vue'
+import { computed } from 'vue'
 import { resolveFileUrl } from '../api/file'
 import {
   activityCampusText,
   activityCategoryText,
   activityLocationText,
   activityModeText,
-  canRegister,
-  registerDisabledReason,
+  registrationCountText,
   rewardSummary,
+  studentActivityAction,
   studentActivityStatusTagType,
   studentActivityStatusText
 } from '../utils/options'
 
-defineProps({
+const props = defineProps({
   activity: {
     type: Object,
     required: true
   }
+})
+
+const action = computed(() => studentActivityAction(props.activity))
+const actionTarget = computed(() => {
+  const id = props.activity.id
+  const map = {
+    register: `/activities/${id}/register`,
+    myActivities: '/my-activities',
+    checkin: `/activities/${id}/checkin`,
+    scan: '/scan',
+    feedback: `/activities/${id}/feedback`,
+    detail: `/activities/${id}`
+  }
+  return map[action.value.to] || `/activities/${id}`
 })
 </script>

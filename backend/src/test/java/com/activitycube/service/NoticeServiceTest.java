@@ -3,12 +3,15 @@ package com.activitycube.service;
 import com.activitycube.common.BusinessException;
 import com.activitycube.dto.NoticeRequest;
 import com.activitycube.entity.Activity;
+import com.activitycube.entity.Checkin;
+import com.activitycube.entity.Feedback;
 import com.activitycube.entity.Notice;
 import com.activitycube.entity.NoticeReceiver;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
+import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.NoticeMapper;
 import com.activitycube.mapper.NoticeReceiverMapper;
 import com.activitycube.mapper.RegistrationMapper;
@@ -32,9 +35,10 @@ class NoticeServiceTest {
     private final ActivityMapper activityMapper = mock(ActivityMapper.class);
     private final RegistrationMapper registrationMapper = mock(RegistrationMapper.class);
     private final CheckinMapper checkinMapper = mock(CheckinMapper.class);
+    private final FeedbackMapper feedbackMapper = mock(FeedbackMapper.class);
     private final UserMapper userMapper = mock(UserMapper.class);
     private final NoticeService noticeService = new NoticeService(
-            noticeMapper, noticeReceiverMapper, activityMapper, registrationMapper, checkinMapper, userMapper);
+            noticeMapper, noticeReceiverMapper, activityMapper, registrationMapper, checkinMapper, feedbackMapper, userMapper);
 
     @Test
     void organizerCanPublishActivityNoticeToRegisteredStudentsOfOwnActivity() {
@@ -84,6 +88,90 @@ class NoticeServiceTest {
         assertThat(receiver.getReadStatus()).isEqualTo(1);
         assertThat(receiver.getReadTime()).isNotNull();
         verify(noticeReceiverMapper).updateById(receiver);
+    }
+
+    @Test
+    void registrationSuccessUsesSpecificNoticeTypeAndSingleStudentReceiver() {
+        when(noticeMapper.insert(any(Notice.class))).thenAnswer(invocation -> {
+            Notice notice = invocation.getArgument(0, Notice.class);
+            notice.setId(101L);
+            return 1;
+        });
+
+        noticeService.notifyRegistrationSuccess(activity(8L, 2L), new Registration(), student(21L));
+
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeMapper).insert(noticeCaptor.capture());
+        assertThat(noticeCaptor.getValue().getNoticeType()).isEqualTo("registration_success");
+        assertThat(noticeCaptor.getValue().getTitle()).isEqualTo("报名成功");
+        ArgumentCaptor<NoticeReceiver> receiverCaptor = ArgumentCaptor.forClass(NoticeReceiver.class);
+        verify(noticeReceiverMapper).insert(receiverCaptor.capture());
+        assertThat(receiverCaptor.getValue().getReceiverId()).isEqualTo(21L);
+    }
+
+    @Test
+    void checkinSuccessCreatesSpecificNoticeForCheckedStudent() {
+        when(noticeMapper.insert(any(Notice.class))).thenAnswer(invocation -> {
+            Notice notice = invocation.getArgument(0, Notice.class);
+            notice.setId(102L);
+            return 1;
+        });
+        Checkin checkin = new Checkin();
+        checkin.setCheckinType("online");
+
+        noticeService.notifyCheckinSuccess(activity(8L, 2L), student(21L), checkin);
+
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeMapper).insert(noticeCaptor.capture());
+        assertThat(noticeCaptor.getValue().getNoticeType()).isEqualTo("checkin_success");
+        assertThat(noticeCaptor.getValue().getContent()).contains("线上签到成功");
+    }
+
+    @Test
+    void activityStartReminderSkipsDuplicateReceiver() {
+        Activity activity = activity(8L, 2L);
+        activity.setStatus("PUBLISHED");
+        activity.setStartTime(java.time.LocalDateTime.now().plusMinutes(25));
+        Registration registration = registration(21L);
+        Notice existing = new Notice();
+        existing.setId(88L);
+        existing.setActivityId(8L);
+        existing.setNoticeType("activity_start_remind");
+
+        when(activityMapper.selectList(any())).thenReturn(List.of(activity));
+        when(registrationMapper.selectList(any())).thenReturn(List.of(registration));
+        when(noticeMapper.selectList(any())).thenReturn(List.of(existing));
+        when(noticeReceiverMapper.selectCount(any())).thenReturn(1L);
+
+        int sent = noticeService.runActivityStartReminders();
+
+        assertThat(sent).isZero();
+        verify(noticeMapper, never()).insert(any(Notice.class));
+    }
+
+    @Test
+    void feedbackReminderTargetsCheckedStudentsWithoutFeedback() {
+        Activity activity = activity(8L, 2L);
+        activity.setStatus("PUBLISHED");
+        activity.setEndTime(java.time.LocalDateTime.now().minusMinutes(5));
+        Checkin checkin = new Checkin();
+        checkin.setUserId(21L);
+        when(activityMapper.selectList(any())).thenReturn(List.of(activity));
+        when(checkinMapper.selectList(any())).thenReturn(List.of(checkin));
+        when(feedbackMapper.selectCount(any())).thenReturn(0L);
+        when(noticeMapper.selectList(any())).thenReturn(List.of());
+        when(noticeMapper.insert(any(Notice.class))).thenAnswer(invocation -> {
+            Notice notice = invocation.getArgument(0, Notice.class);
+            notice.setId(103L);
+            return 1;
+        });
+
+        int sent = noticeService.runFeedbackReminders();
+
+        assertThat(sent).isEqualTo(1);
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeMapper).insert(noticeCaptor.capture());
+        assertThat(noticeCaptor.getValue().getNoticeType()).isEqualTo("feedback_remind");
     }
 
     private NoticeRequest noticeRequest(String targetType) {

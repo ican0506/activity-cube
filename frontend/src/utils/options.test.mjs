@@ -3,14 +3,23 @@ import test from 'node:test'
 
 import {
   canCheckin,
+  canOnlineCheckin,
+  canQrCheckin,
   canFeedback,
+  checkinModeText,
+  checkinStatusText,
   checkinDisabledReason,
   feedbackDisabledReason,
+  formatDateMinute,
+  activityDisplayStatusText,
   activityCampusText,
   activityModeText,
+  defaultCheckinMode,
   activityLocationText,
   activityScopeMatches,
   activityCategoryText,
+  feedbackTypeText,
+  studentActivityAction,
   isStudentVisibleActivity,
   isOnlineActivity,
   registerDisabledReason,
@@ -19,6 +28,32 @@ import {
   userRoleText,
   userStatusText
 } from './options.js'
+
+test('formats activity time to minute precision for forms and detail pages', () => {
+  assert.equal(formatDateMinute('2026-07-20T14:05:30'), '2026-07-20 14:05')
+  assert.equal(formatDateMinute('2026-07-20 14:05:30'), '2026-07-20 14:05')
+  assert.equal(formatDateMinute(''), '-')
+})
+
+test('activity and checkin status are displayed separately', () => {
+  assert.equal(activityDisplayStatusText({ status: 'NOT_STARTED' }), '未开始报名')
+  assert.equal(activityDisplayStatusText({ status: 'REGISTERING' }), '报名中')
+  assert.equal(activityDisplayStatusText({ status: 'WAITING_START' }), '待开始')
+  assert.equal(activityDisplayStatusText({ status: 'CANCELLED' }), '已取消')
+
+  assert.equal(checkinStatusText({
+    checkinStartTime: '2026-07-20T10:00:00',
+    checkinEndTime: '2026-07-20T11:00:00'
+  }, new Date('2026-07-20T09:00:00')), '签到未开始')
+  assert.equal(checkinStatusText({
+    checkinStartTime: '2026-07-20T10:00:00',
+    checkinEndTime: '2026-07-20T11:00:00'
+  }, new Date('2026-07-20T10:30:00')), '签到中')
+  assert.equal(checkinStatusText({
+    checkinStartTime: '2026-07-20T10:00:00',
+    checkinEndTime: '2026-07-20T11:00:00'
+  }, new Date('2026-07-20T12:00:00')), '签到结束')
+})
 
 test('disables checkin when activity status is ended even if checkin window is still open', () => {
   const now = new Date()
@@ -29,10 +64,14 @@ test('disables checkin when activity status is ended even if checkin window is s
   assert.equal(checkinDisabledReason({ status: 'ENDED', checkinStartTime: started, checkinEndTime: later }), '当前活动已结束')
 })
 
-test('only ended activity can submit feedback', () => {
+test('published activity can submit feedback suggestions before it ends', () => {
   assert.equal(canFeedback({ status: 'ENDED' }), true)
-  assert.equal(canFeedback({ status: 'ONGOING' }), false)
-  assert.equal(feedbackDisabledReason({ status: 'ONGOING' }), '活动结束后才可以提交反馈')
+  assert.equal(canFeedback({ status: 'ONGOING', reviewStatus: 'PUBLISHED' }), true)
+  assert.equal(canFeedback({ status: 'PENDING_REVIEW' }), false)
+  assert.equal(feedbackDisabledReason({ status: 'PENDING_REVIEW' }), '活动正在审核中')
+  assert.equal(feedbackTypeText('suggestion'), '活动建议')
+  assert.equal(feedbackTypeText('issue'), '问题反馈')
+  assert.equal(feedbackTypeText('evaluation'), '活动评价')
 })
 
 test('registration disabled reasons are user friendly', () => {
@@ -58,6 +97,20 @@ test('activity mode helpers default missing mode to offline', () => {
   assert.equal(activityModeText({}), '线下活动')
 })
 
+test('checkin mode is independent from activity mode', () => {
+  const now = new Date()
+  const started = new Date(now.getTime() - 60 * 1000).toISOString()
+  const later = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+
+  assert.equal(defaultCheckinMode('offline'), 'qr')
+  assert.equal(defaultCheckinMode('hybrid'), 'online')
+  assert.equal(checkinModeText({ activityMode: 'hybrid' }), '线上签到')
+  assert.equal(checkinModeText({ checkinMode: 'both' }), '线上签到 + 现场扫码签到')
+  assert.equal(canOnlineCheckin({ status: 'ONGOING', activityMode: 'hybrid', checkinStartTime: started, checkinEndTime: later }), true)
+  assert.equal(canQrCheckin({ status: 'ONGOING', activityMode: 'hybrid', checkinStartTime: started, checkinEndTime: later }), false)
+  assert.equal(canQrCheckin({ status: 'ONGOING', checkinMode: 'qr', checkinStartTime: started, checkinEndTime: later }), true)
+})
+
 test('student activity status hides backend workflow states', () => {
   assert.equal(isStudentVisibleActivity({ status: 'DRAFT' }), false)
   assert.equal(isStudentVisibleActivity({ status: 'PENDING_REVIEW' }), false)
@@ -76,6 +129,35 @@ test('student activity status derives checkin window as checkin active', () => {
 
   assert.equal(studentActivityStatus(activity), 'CHECKIN')
   assert.equal(studentActivityStatusText(activity), '签到中')
+})
+
+test('student activity action follows registration checkin feedback lifecycle', () => {
+  const registering = { status: 'REGISTERING', registered: false, checkedIn: false }
+  assert.deepEqual(studentActivityAction(registering), {
+    label: '立即报名',
+    to: 'register',
+    disabled: false,
+    type: 'primary'
+  })
+
+  assert.equal(studentActivityAction({ status: 'REGISTERING', registered: true }).label, '已报名')
+
+  const now = new Date()
+  const started = new Date(now.getTime() - 60 * 1000).toISOString()
+  const later = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+  assert.equal(studentActivityAction({
+    status: 'ONGOING',
+    registered: true,
+    checkedIn: false,
+    checkinStartTime: started,
+    checkinEndTime: later
+  }).label, '去签到')
+
+  assert.equal(studentActivityAction({ status: 'ONGOING', registered: true, checkedIn: true }).label, '已签到')
+  assert.equal(studentActivityAction({ status: 'ENDED', registered: true, checkedIn: true, feedbackSubmitted: false }).label, '去反馈')
+  assert.equal(studentActivityAction({ status: 'ENDED', registered: true, checkedIn: true, feedbackSubmitted: true }).label, '已完成')
+  assert.equal(studentActivityAction({ status: 'CANCELLED' }).label, '已取消')
+  assert.equal(studentActivityAction({ status: 'REGISTERING', canRegister: false, maxParticipants: 10, registrationCount: 10 }).label, '名额已满')
 })
 
 test('activity category helper limits student-facing categories', () => {

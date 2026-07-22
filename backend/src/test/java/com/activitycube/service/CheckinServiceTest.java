@@ -105,7 +105,7 @@ class CheckinServiceTest {
 
         assertThatThrownBy(() -> checkinService.checkin(1L, user(), null))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("线下活动需扫描现场签到二维码");
+                .hasMessage("该活动需现场扫码签到");
         verify(registrationService, never()).requireRegistration(anyLong(), anyLong());
         verify(checkinMapper, never()).insert(org.mockito.ArgumentMatchers.any(Checkin.class));
     }
@@ -156,6 +156,35 @@ class CheckinServiceTest {
         verify(checkinMapper).insert(captor.capture());
         org.assertj.core.api.Assertions.assertThat(captor.getValue().getRegistrationId()).isEqualTo(9L);
         org.assertj.core.api.Assertions.assertThat(captor.getValue().getCheckinType()).isEqualTo("online");
+    }
+
+    @Test
+    void acceptsHybridActivityOnlineCheckinByDefault() {
+        Activity activity = activeActivity("hybrid");
+        Registration registration = new Registration();
+        registration.setId(10L);
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+        when(registrationService.requireRegistration(1L, 3L)).thenReturn(registration);
+        when(checkinMapper.selectCount(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+
+        checkinService.checkin(1L, user(), null);
+
+        ArgumentCaptor<Checkin> captor = ArgumentCaptor.forClass(Checkin.class);
+        verify(checkinMapper).insert(captor.capture());
+        assertThat(captor.getValue().getCheckinType()).isEqualTo("online");
+    }
+
+    @Test
+    void rejectsQrCheckinWhenActivityOnlySupportsOnlineCheckin() {
+        Activity activity = activeActivity("online");
+        activity.setCheckinMode("online");
+        activity.setCheckinCode("abc123");
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+
+        assertThatThrownBy(() -> checkinService.checkin(1L, user(), "abc123"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("该活动不支持现场扫码签到");
+        verify(registrationService, never()).requireRegistration(anyLong(), anyLong());
     }
 
     @Test

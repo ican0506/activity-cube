@@ -3,12 +3,12 @@
     <div class="lite-page-head">
       <div>
         <span class="section-eyebrow">活动反馈</span>
-        <h1>活动反馈</h1>
-        <p>{{ activity?.title || '分享你的活动体验。' }}</p>
+        <h1>反馈建议</h1>
+        <p>{{ activity?.title || '提交活动建议、问题反馈或满意度评价。' }}</p>
       </div>
       <div class="lite-summary-card">
-        <span>满意度评分</span>
-        <strong>{{ form.score }} 分</strong>
+        <span>反馈类型</span>
+        <strong>{{ currentFeedbackTypeText }}</strong>
         <p>支持匿名提交</p>
       </div>
     </div>
@@ -17,7 +17,7 @@
       <div class="page-head">
         <div>
           <h2 class="page-title">填写反馈</h2>
-          <p class="page-subtitle">记录真实体验、改进建议，也可以上传图片或视频附件。</p>
+          <p class="page-subtitle">活动建议和问题反馈可提前提交；活动评价在签到后或活动结束后提交。</p>
         </div>
         <RouterLink :to="`/activities/${route.params.id}`">
           <el-button>返回详情</el-button>
@@ -31,27 +31,56 @@
         :closable="false"
         show-icon
         :title="feedbackDisabledReason(activity)"
-        description="活动结束后再回来提交体验和建议，反馈会帮助负责人复盘活动效果。"
+        description="活动发布后即可反馈建议和问题，活动取消后不再接收反馈。"
       />
 
       <el-form :model="form" label-position="top">
-        <el-form-item label="满意度评分">
+        <el-form-item label="反馈类型">
+          <el-radio-group v-model="form.feedbackType">
+            <el-radio-button v-for="item in availableFeedbackTypes" :key="item.value" :label="item.value">
+              {{ item.label }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-alert
+          v-if="form.feedbackType === 'suggestion'"
+          class="qr-tip"
+          type="info"
+          :closable="false"
+          title="可以提前反馈你对活动时间、地点、内容安排的建议。"
+        />
+        <el-alert
+          v-if="form.feedbackType === 'issue'"
+          class="qr-tip"
+          type="warning"
+          :closable="false"
+          title="遇到报名、地点、通知等问题可以在这里反馈。"
+        />
+        <el-alert
+          v-if="form.feedbackType === 'evaluation'"
+          class="qr-tip"
+          type="success"
+          :closable="false"
+          title="活动结束后可以评价本次活动体验。"
+        />
+
+        <el-form-item v-if="form.feedbackType === 'evaluation'" label="满意度评分">
           <div class="feedback-rate">
             <el-rate v-model="form.score" :max="5" />
             <span>{{ form.score }} 分</span>
           </div>
         </el-form-item>
-        <el-form-item label="活动体验">
+        <el-form-item :label="contentLabel">
           <el-input
             v-model="form.content"
             type="textarea"
             :rows="5"
             maxlength="1000"
             show-word-limit
-            placeholder="可以写下活动流程、现场体验、组织服务等感受"
+            :placeholder="contentPlaceholder"
           />
         </el-form-item>
-        <el-form-item label="改进建议">
+        <el-form-item v-if="form.feedbackType === 'evaluation'" label="改进建议">
           <el-input
             v-model="form.suggestion"
             type="textarea"
@@ -102,14 +131,14 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getActivity } from '../../api/activity'
 import { resolveFileUrl, uploadFile } from '../../api/file'
 import { submitFeedback } from '../../api/feedback'
 import { saveFeedbackMedia } from '../../api/media'
-import { canFeedback, feedbackDisabledReason } from '../../utils/options'
+import { canFeedback, feedbackDisabledReason, feedbackTypeText } from '../../utils/options'
 
 const route = useRoute()
 const router = useRouter()
@@ -119,15 +148,53 @@ const submitting = ref(false)
 const attachments = ref([])
 const attachmentFileList = ref([])
 const form = reactive({
+  feedbackType: 'suggestion',
   score: 5,
   content: '',
   suggestion: '',
   anonymous: false
 })
 
+const evaluationAvailable = computed(() => activity.value?.checkedIn || activity.value?.status === 'ENDED')
+const availableFeedbackTypes = computed(() => {
+  const types = [
+    { label: '活动建议', value: 'suggestion' },
+    { label: '问题反馈', value: 'issue' }
+  ]
+  if (evaluationAvailable.value) {
+    types.push({ label: '活动评价', value: 'evaluation' })
+  }
+  return types
+})
+const currentFeedbackTypeText = computed(() => feedbackTypeText(form.feedbackType))
+const contentLabel = computed(() => {
+  if (form.feedbackType === 'issue') return '问题描述'
+  if (form.feedbackType === 'evaluation') return '活动体验'
+  return '活动建议'
+})
+const contentPlaceholder = computed(() => {
+  if (form.feedbackType === 'issue') return '请描述报名、地点、通知或活动安排中遇到的问题'
+  if (form.feedbackType === 'evaluation') return '可以写下活动流程、现场体验、组织服务等感受'
+  return '可以写下你对活动时间、地点、内容安排的建议'
+})
+
+watch(evaluationAvailable, (available) => {
+  if (!available && form.feedbackType === 'evaluation') {
+    form.feedbackType = 'suggestion'
+  }
+})
+
 async function submit() {
   if (activity.value && !canFeedback(activity.value)) {
     ElMessage.warning(feedbackDisabledReason(activity.value))
+    return
+  }
+  if (!form.content.trim()) {
+    ElMessage.warning('反馈内容不能为空')
+    return
+  }
+  if (form.feedbackType === 'evaluation' && (!form.score || form.score < 1 || form.score > 5)) {
+    ElMessage.warning('满意度评分必须在 1 到 5 之间')
     return
   }
   submitting.value = true

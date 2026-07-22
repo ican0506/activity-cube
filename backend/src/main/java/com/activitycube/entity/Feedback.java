@@ -15,9 +15,11 @@ public class Feedback {
     private Long id;
     private Long activityId;
     private Long userId;
+    private String feedbackType;
     private Integer score;
     private String content;
     private String suggestion;
+    private String handleStatus;
     private Boolean anonymous;
     @TableField("create_time")
     private LocalDateTime createdAt;

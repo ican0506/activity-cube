@@ -158,19 +158,19 @@ a {
 
 .scan-shortcut-button.el-button {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-color: rgba(11, 125, 59, 0.18);
-  background: #f1faf5;
+  width: 32px;
+  height: 32px;
+  border-color: rgba(11, 125, 59, 0.22);
+  background: #ffffff;
   color: var(--ac-primary-strong);
-  box-shadow: 0 8px 20px rgba(11, 125, 59, 0.1);
+  box-shadow: 0 6px 16px rgba(11, 125, 59, 0.08);
 }
 
 .scan-shortcut-button.el-button:hover,
 .scan-shortcut-button.el-button:focus {
   border-color: rgba(11, 125, 59, 0.34);
-  background: linear-gradient(135deg, var(--ac-primary), var(--ac-secondary));
-  color: #ffffff;
+  background: #f1faf5;
+  color: var(--ac-primary-strong);
 }
 
 .user-dropdown {
@@ -1862,8 +1862,8 @@ a {
   }
 
   .scan-shortcut-button.el-button {
-    width: 36px !important;
-    height: 36px;
+    width: 32px !important;
+    height: 32px;
   }
 
   .user-menu-trigger {
@@ -2196,14 +2196,20 @@ a {
 
 .scan-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.scan-layout-single {
+  width: min(100%, 620px);
 }
 
 .scan-video-wrap {
   position: relative;
-  width: min(100%, 400px);
+  width: min(80vw, 360px);
   aspect-ratio: 1;
   margin: 18px auto;
   overflow: hidden;

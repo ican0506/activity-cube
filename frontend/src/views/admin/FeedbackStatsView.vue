@@ -13,9 +13,10 @@
 
     <div class="metric-row">
       <div class="metric metric-accent"><span>反馈人数</span><strong>{{ stats.feedbackCount || 0 }}</strong></div>
+      <div class="metric"><span>活动建议</span><strong>{{ stats.suggestionCount || 0 }}</strong></div>
+      <div class="metric"><span>问题反馈</span><strong>{{ stats.issueCount || 0 }}</strong></div>
+      <div class="metric"><span>活动评价</span><strong>{{ stats.evaluationCount || 0 }}</strong></div>
       <div class="metric"><span>平均评分</span><strong>{{ averageScoreText }}</strong></div>
-      <div class="metric"><span>5 分人数</span><strong>{{ distribution[5] || 0 }}</strong></div>
-      <div class="metric"><span>低分反馈</span><strong>{{ lowScoreCount }}</strong></div>
     </div>
 
     <div class="feedback-stats-grid">
@@ -41,9 +42,12 @@
           <div v-for="item in rows" :key="item.id" class="feedback-item">
             <div class="feedback-item-head">
               <strong>{{ displayName(item) }}</strong>
-              <el-rate :model-value="item.score" disabled />
+              <div class="feedback-item-tags">
+                <el-tag size="small" :type="feedbackTypeTag(item.feedbackType)">{{ feedbackTypeText(item.feedbackType) }}</el-tag>
+                <el-rate v-if="item.score" :model-value="item.score" disabled />
+              </div>
             </div>
-            <p v-if="item.content"><span>活动体验：</span>{{ item.content }}</p>
+            <p v-if="item.content"><span>{{ feedbackContentLabel(item.feedbackType) }}：</span>{{ item.content }}</p>
             <p v-if="item.suggestion"><span>改进建议：</span>{{ item.suggestion }}</p>
             <MediaPreview :items="item.mediaList || []" />
             <small>{{ item.createdAt }}</small>
@@ -64,9 +68,19 @@
         <el-table-column label="姓名" width="130">
           <template #default="{ row }">{{ displayName(row) }}</template>
         </el-table-column>
-        <el-table-column prop="score" label="评分" width="100" />
-        <el-table-column prop="content" label="活动体验" min-width="220" />
+        <el-table-column label="反馈类型" width="120">
+          <template #default="{ row }">
+            <el-tag :type="feedbackTypeTag(row.feedbackType)">{{ feedbackTypeText(row.feedbackType) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="评分" width="100">
+          <template #default="{ row }">{{ row.score || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="content" label="反馈内容" min-width="220" />
         <el-table-column prop="suggestion" label="改进建议" min-width="220" />
+        <el-table-column label="处理状态" width="110">
+          <template #default="{ row }">{{ handleStatusText(row.handleStatus) }}</template>
+        </el-table-column>
         <el-table-column label="附件" min-width="220">
           <template #default="{ row }">
             <MediaPreview :items="row.mediaList || []" compact />
@@ -93,6 +107,7 @@ import { getActivity } from '../../api/activity'
 import { resolveFileUrl } from '../../api/file'
 import { getFeedbackStats, listFeedbacks } from '../../api/feedback'
 import { listFeedbackMedia } from '../../api/media'
+import { feedbackTypeText } from '../../utils/options'
 
 const MediaPreview = defineComponent({
   props: {
@@ -128,17 +143,37 @@ const MediaPreview = defineComponent({
 const route = useRoute()
 const rows = ref([])
 const activity = ref(null)
-const stats = ref({ feedbackCount: 0, averageScore: 0, scoreDistribution: {} })
+const stats = ref({ feedbackCount: 0, suggestionCount: 0, issueCount: 0, evaluationCount: 0, averageScore: 0, scoreDistribution: {} })
 const loading = ref(false)
 const chartRef = ref(null)
 let chart = null
 
 const distribution = computed(() => stats.value.scoreDistribution || {})
 const averageScoreText = computed(() => Number(stats.value.averageScore || 0).toFixed(1))
-const lowScoreCount = computed(() => (distribution.value[1] || 0) + (distribution.value[2] || 0))
 
 function displayName(item) {
   return item.anonymous ? '匿名同学' : (item.realName || '农大同学')
+}
+
+function feedbackTypeTag(type) {
+  if (type === 'issue') return 'warning'
+  if (type === 'evaluation') return 'success'
+  return 'primary'
+}
+
+function feedbackContentLabel(type) {
+  if (type === 'issue') return '问题描述'
+  if (type === 'evaluation') return '活动体验'
+  return '活动建议'
+}
+
+function handleStatusText(status) {
+  const map = {
+    pending: '未处理',
+    viewed: '已查看',
+    resolved: '已处理'
+  }
+  return map[status] || '未处理'
 }
 
 async function load() {

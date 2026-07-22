@@ -22,7 +22,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getActivity } from '../../api/activity'
 import { useUserStore } from '../../stores/user'
 import { buildLoginRedirect } from '../../utils/authSession'
-import { canCheckin, canRegister, checkinDisabledReason, isOnlineActivity, registerDisabledReason } from '../../utils/options'
+import { canCheckin, canQrCheckin, canRegister, checkinDisabledReason, registerDisabledReason } from '../../utils/options'
 import { resolveScanAction } from '../../utils/scanResolve'
 
 const route = useRoute()
@@ -54,8 +54,20 @@ async function resolve() {
       return
     }
 
-    if (!isOnlineActivity(activity) && !route.query.code) {
-      errorMessage.value = '线下活动需扫描现场签到二维码'
+    if (!route.query.code) {
+      errorMessage.value = '签到二维码缺少活动信息，请重新扫码或输入完整签到码。'
+      return
+    }
+    if (activity.checkedIn) {
+      errorMessage.value = '你已完成签到，请勿重复签到'
+      return
+    }
+    if (!activity.registered) {
+      errorMessage.value = '你尚未报名，不能签到'
+      return
+    }
+    if (!canQrCheckin(activity)) {
+      errorMessage.value = canCheckin(activity) ? '该活动不支持现场扫码签到' : checkinDisabledReason(activity)
       return
     }
     if (!canCheckin(activity)) {

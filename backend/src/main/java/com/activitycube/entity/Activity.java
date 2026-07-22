@@ -18,6 +18,7 @@ public class Activity {
     private String description;
     private String coverUrl;
     private String activityMode;
+    private String checkinMode;
     private String activityCategory;
     private String checkinCode;
     private String rejectReason;
@@ -39,6 +40,26 @@ public class Activity {
     private String status;
     @TableField(exist = false)
     private String reviewStatus;
+    @TableField(exist = false)
+    private Long registrationCount;
+    @TableField(exist = false)
+    private Long checkinCount;
+    @TableField(exist = false)
+    private Boolean registered;
+    @TableField(exist = false)
+    private Boolean checkedIn;
+    @TableField(exist = false)
+    private Boolean feedbackSubmitted;
+    @TableField(exist = false)
+    private Boolean canRegister;
+    @TableField(exist = false)
+    private Boolean canCheckin;
+    @TableField(exist = false)
+    private Boolean canOnlineCheckin;
+    @TableField(exist = false)
+    private Boolean canQrCheckin;
+    @TableField(exist = false)
+    private String studentActivityStatusText;
     private Long creatorId;
     @TableField("create_time")
     private LocalDateTime createdAt;

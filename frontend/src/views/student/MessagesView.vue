@@ -85,10 +85,33 @@ import { getUnreadMessageCount, listMessages, markAllMessagesRead, markMessageRe
 const typeOptions = [
   { label: '全部', value: 'all' },
   { label: '活动通知', value: 'activity' },
-  { label: '签到提醒', value: 'checkin_reminder' },
-  { label: '反馈提醒', value: 'feedback_reminder' },
+  { label: '报名成功', value: 'registration_success' },
+  { label: '签到成功', value: 'checkin_success' },
+  { label: '活动变更', value: 'activity_update' },
+  { label: '活动开始提醒', value: 'activity_start_remind' },
+  { label: '签到提醒', value: 'checkin_remind' },
+  { label: '签到截止提醒', value: 'checkin_deadline_remind' },
+  { label: '反馈提醒', value: 'feedback_remind' },
+  { label: '人工补签', value: 'manual_checkin' },
+  { label: '奖励发放', value: 'reward_issued' },
   { label: '系统通知', value: 'system' }
 ]
+
+const noticeTypeLabels = {
+  activity: '活动通知',
+  checkin_reminder: '签到提醒',
+  feedback_reminder: '反馈提醒',
+  registration_success: '报名成功',
+  checkin_success: '签到成功',
+  activity_update: '活动变更',
+  activity_start_remind: '活动开始提醒',
+  checkin_remind: '签到提醒',
+  checkin_deadline_remind: '签到截止提醒',
+  feedback_remind: '反馈提醒',
+  manual_checkin: '人工补签',
+  reward_issued: '奖励发放',
+  system: '系统通知'
+}
 
 const filters = reactive({
   type: 'all',
@@ -146,23 +169,27 @@ async function openMessage(item) {
     await markMessageRead(item.id)
     item.readStatus = 1
     unreadCount.value = Math.max(0, unreadCount.value - 1)
+    window.dispatchEvent(new CustomEvent('activity-cube:messages-updated'))
   }
 }
 
 async function readAll() {
   await markAllMessagesRead()
   ElMessage.success('已全部标记为已读')
+  window.dispatchEvent(new CustomEvent('activity-cube:messages-updated'))
   load()
 }
 
 function noticeTypeText(type) {
-  return typeOptions.find((item) => item.value === type)?.label || '活动通知'
+  return noticeTypeLabels[type] || '活动通知'
 }
 
 function noticeTagType(type) {
   if (type === 'system') return 'warning'
-  if (type === 'checkin_reminder') return 'success'
-  if (type === 'feedback_reminder') return 'info'
+  if (type === 'checkin_success' || type === 'checkin_remind' || type === 'checkin_reminder') return 'success'
+  if (type === 'feedback_remind' || type === 'feedback_reminder') return 'info'
+  if (type === 'checkin_deadline_remind') return 'danger'
+  if (type === 'registration_success' || type === 'reward_issued' || type === 'activity_update') return 'primary'
   return 'primary'
 }
 

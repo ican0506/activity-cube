@@ -30,11 +30,16 @@ public class CheckinService {
     private final OperationLogService operationLogService;
     private final NoticeService noticeService;
 
+    @Transactional
     public Checkin checkin(Long activityId, User user, String checkinCode) {
         Activity activity = activityService.requireActivity(activityId);
         validateActivityStatus(activity);
-        validateCheckinTime(activity);
-        validateOfflineCheckinCode(activity, checkinCode);
+        boolean qrCheckin = StringUtils.hasText(checkinCode);
+        validateCheckinTime(activity, qrCheckin);
+        validateCheckinMode(activity, qrCheckin);
+        if (qrCheckin) {
+            validateQrCheckinCode(activity, checkinCode);
+        }
         Registration registration = registrationService.requireRegistration(activityId, user.getId());
         if (checkinMapper.selectCount(new LambdaQueryWrapper<Checkin>()
                 .eq(Checkin::getActivityId, activityId)
@@ -47,8 +52,9 @@ public class CheckinService {
         checkin.setRegistrationId(registration.getId());
         checkin.setCampus(user.getCampus());
         checkin.setCheckinTime(LocalDateTime.now());
-        checkin.setCheckinType(isOffline(activity) ? "qr" : "online");
+        checkin.setCheckinType(qrCheckin ? "qr" : "online");
         checkinMapper.insert(checkin);
+        noticeService.notifyCheckinSuccess(activity, user, checkin);
         return checkin;
     }
 
@@ -105,7 +111,7 @@ public class CheckinService {
         }
     }
 
-    private void validateCheckinTime(Activity activity) {
+    private void validateCheckinTime(Activity activity, boolean qrCheckin) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime checkinStartTime = activity.getCheckinStartTime() == null ? activity.getStartTime() : activity.getCheckinStartTime();
         LocalDateTime checkinEndTime = activity.getCheckinEndTime() == null ? activity.getEndTime() : activity.getCheckinEndTime();
@@ -113,27 +119,29 @@ public class CheckinService {
             throw new BusinessException("签到尚未开始");
         }
         if (checkinEndTime != null && now.isAfter(checkinEndTime)) {
-            if (isOffline(activity)) {
+            if (qrCheckin) {
                 throw new BusinessException("签到二维码已过期，请重新扫码");
             }
             throw new BusinessException("签到已结束");
         }
     }
 
-    private void validateOfflineCheckinCode(Activity activity, String checkinCode) {
-        if (!isOffline(activity)) {
+    private void validateCheckinMode(Activity activity, boolean qrCheckin) {
+        if (qrCheckin) {
+            if (!ActivityService.supportsQrCheckin(activity)) {
+                throw new BusinessException("该活动不支持现场扫码签到");
+            }
             return;
         }
-        if (!StringUtils.hasText(checkinCode)) {
-            throw new BusinessException("线下活动需扫描现场签到二维码");
-        }
-        if (!checkinCode.equals(activity.getCheckinCode())) {
-            throw new BusinessException("签到二维码无效");
+        if (!ActivityService.supportsOnlineCheckin(activity)) {
+            throw new BusinessException("该活动需现场扫码签到");
         }
     }
 
-    private boolean isOffline(Activity activity) {
-        return !ActivityService.MODE_ONLINE.equals(activity.getActivityMode());
+    private void validateQrCheckinCode(Activity activity, String checkinCode) {
+        if (!checkinCode.equals(activity.getCheckinCode())) {
+            throw new BusinessException("签到二维码无效");
+        }
     }
 
     private Activity requireManualCheckinPermission(Long activityId, User operator) {

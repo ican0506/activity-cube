@@ -75,7 +75,7 @@
                     <el-dropdown-item command="tools">抽签分组</el-dropdown-item>
                     <el-dropdown-item command="rewards">发放奖励</el-dropdown-item>
                     <el-dropdown-item command="feedbacks">反馈统计</el-dropdown-item>
-                    <el-dropdown-item divided command="delete">删除活动</el-dropdown-item>
+                    <el-dropdown-item divided command="cancel">取消活动</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -119,7 +119,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, MoreFilled, Plus, Tickets } from '@element-plus/icons-vue'
-import { deleteActivity, listActivities } from '../../api/activity'
+import { cancelActivity, listActivities } from '../../api/activity'
 import { listCheckins } from '../../api/checkin'
 import { listFeedbacks } from '../../api/feedback'
 import { listRegistrations } from '../../api/registration'
@@ -175,8 +175,8 @@ async function sumListCount(fetcher) {
 }
 
 async function handleCommand(command, row) {
-  if (command === 'delete') {
-    await remove(row.id)
+  if (command === 'cancel') {
+    await cancel(row.id)
     return
   }
   if (command === 'rewards') {
@@ -192,10 +192,10 @@ async function issueRewards(row) {
   ElMessage.success(`已发放 ${issued.length} 条活动奖励`)
 }
 
-async function remove(id) {
-  await ElMessageBox.confirm('确认删除该活动？', '删除确认')
-  await deleteActivity(id)
-  ElMessage.success('已删除')
+async function cancel(id) {
+  await ElMessageBox.confirm('确认取消该活动？取消后学生端将不可继续报名和签到。', '取消活动')
+  await cancelActivity(id)
+  ElMessage.success('活动已取消')
   load()
 }
 

@@ -1,5 +1,18 @@
 <template>
   <section class="scan-page">
+    <div v-if="!isStudentUser" class="panel scan-role-card">
+      <div class="section-title scan-section-title">
+        <div>
+          <h1>无需扫码</h1>
+          <p>当前角色无需扫码，请在活动管理中查看二维码和签到名单。</p>
+        </div>
+      </div>
+      <RouterLink to="/admin/activities">
+        <el-button type="primary">进入活动管理中心</el-button>
+      </RouterLink>
+    </div>
+
+    <template v-else>
     <div class="lite-page-head scan-lite-head">
       <div>
         <span class="section-eyebrow">扫码入口</span>
@@ -9,7 +22,7 @@
       <el-tag :type="cameraRunning ? 'success' : 'info'">{{ cameraRunning ? '识别中' : '准备中' }}</el-tag>
     </div>
 
-    <div class="scan-layout lite-scan-layout">
+    <div class="scan-layout lite-scan-layout" :class="{ 'scan-layout-single': !showFallback }">
       <div class="panel scan-camera-card">
         <div class="section-title scan-section-title">
           <div>
@@ -67,6 +80,7 @@
         </div>
       </div>
     </div>
+    </template>
   </section>
 </template>
 
@@ -75,9 +89,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { resolveCheckinCode } from '../../api/scan'
+import { useUserStore } from '../../stores/user'
 import { buildScanTarget } from '../../utils/scanResolve'
+import { shouldShowScanShortcut } from '../../utils/navigation'
 
 const router = useRouter()
+const userStore = useUserStore()
 const videoRef = ref(null)
 const fallbackRef = ref(null)
 const checkinCode = ref('')
@@ -89,6 +106,7 @@ const showFallback = ref(false)
 const resolvingCheckinCode = ref(false)
 let stream = null
 let scanTimer = null
+const isStudentUser = computed(() => shouldShowScanShortcut(userStore.role))
 
 const cameraPlaceholder = computed(() => {
   if (startingCamera.value) return '正在启动摄像头'
@@ -206,6 +224,10 @@ function navigate(value, invalidMessage) {
   router.push(target)
 }
 
-onMounted(startCamera)
+onMounted(() => {
+  if (isStudentUser.value) {
+    startCamera()
+  }
+})
 onBeforeUnmount(stopCamera)
 </script>

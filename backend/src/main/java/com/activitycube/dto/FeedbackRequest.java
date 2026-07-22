@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class FeedbackRequest {
+    private String feedbackType;
     @Min(1)
     @Max(5)
     private Integer score;

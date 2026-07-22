@@ -3,8 +3,10 @@ package com.activitycube.service;
 import com.activitycube.common.BusinessException;
 import com.activitycube.dto.FeedbackRequest;
 import com.activitycube.entity.Activity;
+import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Feedback;
 import com.activitycube.entity.User;
+import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.UserMapper;
 import com.activitycube.vo.FeedbackView;
@@ -27,11 +29,13 @@ class FeedbackServiceTest {
     private final RegistrationService registrationService = mock(RegistrationService.class);
     private final ActivityService activityService = mock(ActivityService.class);
     private final UserMapper userMapper = mock(UserMapper.class);
-    private final FeedbackService feedbackService = new FeedbackService(feedbackMapper, registrationService, activityService, userMapper);
+    private final CheckinMapper checkinMapper = mock(CheckinMapper.class);
+    private final FeedbackService feedbackService = new FeedbackService(feedbackMapper, registrationService, activityService, userMapper, checkinMapper);
 
     @Test
     void storesSuggestionAndAnonymousFlagWhenSubmittingFeedback() {
         FeedbackRequest request = new FeedbackRequest();
+        request.setFeedbackType("evaluation");
         request.setScore(5);
         request.setContent("活动体验很好");
         request.setSuggestion("希望增加互动");
@@ -43,6 +47,7 @@ class FeedbackServiceTest {
         Feedback feedback = feedbackService.submit(1L, request, user);
 
         assertThat(feedback.getScore()).isEqualTo(5);
+        assertThat(feedback.getFeedbackType()).isEqualTo("evaluation");
         assertThat(feedback.getContent()).isEqualTo("活动体验很好");
         assertThat(feedback.getSuggestion()).isEqualTo("希望增加互动");
         assertThat(feedback.getAnonymous()).isTrue();
@@ -52,6 +57,7 @@ class FeedbackServiceTest {
     @Test
     void rejectsDuplicateFeedbackFromSameUser() {
         FeedbackRequest request = new FeedbackRequest();
+        request.setFeedbackType("evaluation");
         request.setScore(4);
         User user = new User();
         user.setId(3L);
@@ -60,26 +66,48 @@ class FeedbackServiceTest {
 
         assertThatThrownBy(() -> feedbackService.submit(1L, request, user))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("你已提交过反馈");
+                .hasMessage("你已提交过活动评价");
         verify(feedbackMapper, never()).insert(any(Feedback.class));
     }
 
     @Test
-    void rejectsFeedbackBeforeActivityEnds() {
+    void rejectsEvaluationBeforeCheckinAndBeforeActivityEnds() {
         FeedbackRequest request = new FeedbackRequest();
+        request.setFeedbackType("evaluation");
         request.setScore(4);
+        request.setContent("体验内容");
         User user = new User();
         user.setId(3L);
         Activity activity = new Activity();
         activity.setId(1L);
         activity.setStatus("ONGOING");
         when(activityService.requireActivity(1L)).thenReturn(activity);
+        when(checkinMapper.selectCount(any())).thenReturn(0L);
 
         assertThatThrownBy(() -> feedbackService.submit(1L, request, user))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("活动结束后才可以提交反馈");
-        verify(registrationService, never()).requireRegistration(anyLong(), anyLong());
+                .hasMessage("签到后或活动结束后才可以提交活动评价");
         verify(feedbackMapper, never()).insert(any(Feedback.class));
+    }
+
+    @Test
+    void acceptsSuggestionBeforeActivityEnds() {
+        FeedbackRequest request = new FeedbackRequest();
+        request.setFeedbackType("suggestion");
+        request.setContent("建议调整活动地点");
+        User user = new User();
+        user.setId(3L);
+        Activity activity = new Activity();
+        activity.setId(1L);
+        activity.setStatus("ONGOING");
+        activity.setReviewStatus("PUBLISHED");
+        when(activityService.requireActivity(1L)).thenReturn(activity);
+
+        Feedback feedback = feedbackService.submit(1L, request, user);
+
+        assertThat(feedback.getFeedbackType()).isEqualTo("suggestion");
+        assertThat(feedback.getScore()).isNull();
+        verify(feedbackMapper).insert(feedback);
     }
 
     @Test
@@ -115,6 +143,7 @@ class FeedbackServiceTest {
         Feedback feedback = new Feedback();
         feedback.setActivityId(1L);
         feedback.setUserId(userId);
+        feedback.setFeedbackType("evaluation");
         feedback.setScore(5);
         feedback.setContent("体验内容");
         feedback.setSuggestion("建议内容");

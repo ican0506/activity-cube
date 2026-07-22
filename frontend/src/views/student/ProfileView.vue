@@ -29,7 +29,7 @@
       :title="loadError"
     />
 
-    <div class="profile-grid">
+    <div class="profile-grid profile-basic-grid">
       <div class="panel profile-card">
         <div class="section-title compact">
           <div>
@@ -44,17 +44,21 @@
         </div>
       </div>
 
-      <div class="panel quick-card">
+      <div class="panel profile-security-card">
         <div class="section-title compact">
           <div>
-            <h2>快捷入口</h2>
+            <h2>账号安全</h2>
           </div>
         </div>
-        <div class="quick-entry-grid">
-          <RouterLink v-for="item in quickEntries" :key="item.title" :to="item.to" class="quick-entry">
-            <span>{{ item.title }}</span>
-            <small>{{ item.desc }}</small>
-          </RouterLink>
+        <div class="security-box">
+          <strong>登录账号</strong>
+          <span>{{ profile.username || profile.studentNo || '-' }}</span>
+          <div class="security-actions">
+            <RouterLink to="/profile/security">
+              <el-button type="primary">修改密码</el-button>
+            </RouterLink>
+            <el-button plain @click="logout">退出登录</el-button>
+          </div>
         </div>
       </div>
     </div>
@@ -67,82 +71,31 @@
       </div>
     </div>
 
-    <div class="profile-grid">
-      <div class="panel todo-panel">
-        <div class="section-title compact">
-          <div>
-            <h2>待办提醒</h2>
-          </div>
-        </div>
-        <div v-if="todos.length" class="todo-list">
-          <button v-for="item in todos" :key="`${item.type}-${item.activityId || item.title}`" class="todo-item" @click="goTodo(item)">
-            <div>
-              <el-tag :type="todoTagType(item.type)" size="small">{{ todoTypeText(item.type) }}</el-tag>
-              <strong>{{ item.title }}</strong>
-              <p>{{ item.description }}</p>
-            </div>
-            <span>{{ formatTime(item.dueTime) }}</span>
-          </button>
-        </div>
-        <el-empty v-else description="暂无待办事项，新的活动提醒会出现在这里。" />
-      </div>
-
-      <div class="panel profile-security-card">
-        <div class="section-title compact">
-          <div>
-            <h2>账号安全</h2>
-          </div>
-        </div>
-        <div class="security-box">
-          <strong>登录账号</strong>
-          <span>{{ profile.username || profile.studentNo || '-' }}</span>
-          <RouterLink to="/profile/security">
-            <el-button type="primary">进入账号安全</el-button>
-          </RouterLink>
-        </div>
-      </div>
-    </div>
-
     <div id="rewards" class="panel rewards-panel">
       <div class="section-title">
         <div>
           <h2>我的活动成果</h2>
+          <p>完成签到并由负责人发放后，活动成果会展示在这里。</p>
         </div>
+        <el-button v-if="rewards.length > 3" text type="primary" @click="showAllRewards = !showAllRewards">
+          {{ showAllRewards ? '收起' : '查看全部成果' }}
+        </el-button>
       </div>
-      <el-table v-if="rewards.length" :data="rewards" stripe class="desktop-table">
-        <el-table-column prop="activityTitle" label="活动名称" min-width="180" />
-        <el-table-column prop="activityCategory" label="活动类型" width="120" />
-        <el-table-column label="活动时间" min-width="190">
-          <template #default="{ row }">{{ formatRange(row.startTime, row.endTime) }}</template>
-        </el-table-column>
-        <el-table-column label="签到状态" width="100">
-          <template #default>已签到</template>
-        </el-table-column>
-        <el-table-column prop="rewardType" label="奖励类型" width="110" />
-        <el-table-column label="课外学时" width="110">
-          <template #default="{ row }">{{ row.rewardHours || 0 }}</template>
-        </el-table-column>
-        <el-table-column label="积分" width="90">
-          <template #default="{ row }">{{ row.rewardPoints || 0 }}</template>
-        </el-table-column>
-        <el-table-column prop="issuedTime" label="获得时间" min-width="170" />
-        <el-table-column prop="rewardDescription" label="奖励说明" min-width="180" />
-      </el-table>
-      <div v-if="rewards.length" class="mobile-card-list reward-mobile-list">
-        <div v-for="reward in rewards" :key="reward.id" class="reward-card">
+      <div v-if="rewards.length" class="reward-list">
+        <div v-for="reward in displayedRewards" :key="reward.id" class="reward-card">
           <div>
             <el-tag type="success" size="small">{{ reward.activityCategory || '其他' }}</el-tag>
             <h3>{{ reward.activityTitle }}</h3>
-            <p>{{ formatRange(reward.startTime, reward.endTime) }}</p>
+            <p>{{ reward.issuedTime || formatRange(reward.startTime, reward.endTime) || '-' }}</p>
           </div>
           <div class="reward-values">
-            <span>{{ reward.rewardType || '无' }}</span>
-            <strong>{{ reward.rewardHours || 0 }} 学时 · {{ reward.rewardPoints || 0 }} 积分</strong>
-            <small>{{ reward.issuedTime || '-' }}</small>
+            <span>{{ reward.rewardType || '活动奖励' }}</span>
+            <strong>{{ rewardValueText(reward) }}</strong>
+            <small>{{ reward.rewardDescription || '已发放' }}</small>
           </div>
         </div>
       </div>
-      <el-empty v-if="!rewards.length && !loading" description="暂无活动成果，参加并完成活动后会展示在这里。" />
+      <el-empty v-if="!rewards.length && !loading" description="暂无活动成果，完成签到并发放奖励后会展示在这里。" />
     </div>
 
     <el-dialog v-model="editVisible" title="编辑个人资料" width="520px" class="profile-dialog">
@@ -186,7 +139,6 @@ import { listMyRewards } from '../../api/reward'
 import {
   getStudentProfile,
   getStudentProfileSummary,
-  getStudentProfileTodos,
   updateStudentProfile,
   uploadStudentAvatar
 } from '../../api/studentProfile'
@@ -200,11 +152,11 @@ const loading = ref(false)
 const loadError = ref('')
 const profile = ref({})
 const summary = ref({})
-const todos = ref([])
 const rewards = ref([])
 const editVisible = ref(false)
 const savingProfile = ref(false)
 const avatarUploading = ref(false)
+const showAllRewards = ref(false)
 
 const editForm = reactive({
   avatarUrl: '',
@@ -236,28 +188,19 @@ const metrics = computed(() => [
   { label: '未读消息', value: summary.value.unreadMessageCount || 0, hint: '活动通知和系统消息' }
 ])
 
-const quickEntries = [
-  { title: '我的报名', desc: '查看和取消报名', to: '/my/registrations' },
-  { title: '我的签到', desc: '查看签到记录', to: '/my/checkins' },
-  { title: '我的反馈', desc: '到已结束活动提交', to: '/activities/ended' },
-  { title: '我的消息', desc: '查看活动通知', to: '/messages' },
-  { title: '已结束活动', desc: '查看历史活动', to: '/activities/ended' },
-  { title: '账号安全', desc: '修改登录密码', to: '/profile/security' }
-]
+const displayedRewards = computed(() => showAllRewards.value ? rewards.value : rewards.value.slice(0, 3))
 
 async function loadProfile() {
   loading.value = true
   loadError.value = ''
   try {
-    const [profileData, summaryData, todoData, rewardData] = await Promise.all([
+    const [profileData, summaryData, rewardData] = await Promise.all([
       getStudentProfile(),
       getStudentProfileSummary(),
-      getStudentProfileTodos(),
       listMyRewards()
     ])
     profile.value = profileData || {}
     summary.value = summaryData || {}
-    todos.value = todoData || []
     rewards.value = rewardData || []
   } catch (error) {
     loadError.value = error.message || '个人中心加载失败'
@@ -311,37 +254,21 @@ async function saveProfile() {
   }
 }
 
-function goTodo(item) {
-  if (item.targetPath) {
-    router.push(item.targetPath)
-  }
-}
-
-function todoTypeText(type) {
-  const map = {
-    upcoming: '即将开始',
-    checkin: '待签到',
-    feedback: '待反馈',
-    message: '未读消息',
-    registration_closing: '报名截止'
-  }
-  return map[type] || '待办'
-}
-
-function todoTagType(type) {
-  const map = {
-    checkin: 'success',
-    feedback: 'warning',
-    message: 'danger',
-    registration_closing: 'warning',
-    upcoming: 'primary'
-  }
-  return map[type] || 'info'
-}
-
 function formatTime(value) {
   if (!value) return ''
   return String(value).replace('T', ' ').slice(0, 16)
+}
+
+function rewardValueText(reward) {
+  const parts = []
+  if (Number(reward.rewardHours || 0) > 0) parts.push(`+${reward.rewardHours} 课外学时`)
+  if (Number(reward.rewardPoints || 0) > 0) parts.push(`+${reward.rewardPoints} 积分`)
+  return parts.length ? parts.join(' · ') : reward.rewardType || '已获得'
+}
+
+function logout() {
+  userStore.logout()
+  router.push('/login')
 }
 
 function formatRange(start, end) {
@@ -455,35 +382,6 @@ onMounted(loadProfile)
   overflow-wrap: anywhere;
 }
 
-.quick-entry-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.quick-entry {
-  display: grid;
-  gap: 4px;
-  padding: 13px 14px;
-  border: 1px solid rgba(22, 160, 133, 0.14);
-  border-radius: 14px;
-  background: #f7fcf9;
-  transition: transform 0.18s ease, border-color 0.18s ease;
-}
-
-.quick-entry:hover {
-  transform: translateY(-2px);
-  border-color: rgba(22, 160, 133, 0.36);
-}
-
-.quick-entry span {
-  color: var(--ac-primary-strong);
-  font-weight: 900;
-}
-
-.quick-entry small {
-  color: var(--ac-muted);
-}
-
 .profile-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -494,49 +392,6 @@ onMounted(loadProfile)
   display: block;
   margin-top: 8px;
   color: var(--ac-muted);
-}
-
-.todo-list {
-  display: grid;
-  gap: 10px;
-}
-
-.todo-item {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(22, 160, 133, 0.12);
-  border-radius: 14px;
-  background: #f7fcf9;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.todo-item:hover {
-  border-color: rgba(22, 160, 133, 0.34);
-  box-shadow: 0 12px 26px rgba(22, 160, 133, 0.08);
-}
-
-.todo-item strong {
-  display: block;
-  margin: 8px 0 4px;
-  font-size: 16px;
-}
-
-.todo-item p {
-  margin: 0;
-  color: var(--ac-muted);
-  line-height: 1.6;
-}
-
-.todo-item > span {
-  flex: 0 0 auto;
-  color: var(--ac-muted);
-  font-size: 13px;
 }
 
 .security-box {
@@ -551,16 +406,25 @@ onMounted(loadProfile)
     #f7fcf9;
 }
 
+.security-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .rewards-panel {
   overflow: hidden;
 }
 
-.reward-mobile-list {
-  display: none;
+.reward-list {
+  display: grid;
+  gap: 10px;
 }
 
 .reward-card {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 15px;
   border: 1px solid rgba(22, 160, 133, 0.14);
@@ -637,17 +501,14 @@ onMounted(loadProfile)
     grid-template-columns: 1fr;
   }
 
-  .todo-item {
+  .reward-card {
     display: grid;
   }
 
-  .desktop-table {
-    display: none;
-  }
-
-  .reward-mobile-list {
+  .security-actions,
+  .security-actions a {
     display: grid;
-    gap: 10px;
+    width: 100%;
   }
 }
 </style>
