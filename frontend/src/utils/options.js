@@ -13,7 +13,7 @@ export const checkinModes = [
 ]
 export const feedbackTypes = [
   { label: '活动建议', value: 'suggestion' },
-  { label: '问题反馈', value: 'issue' },
+  { label: '问题反馈', value: 'problem' },
   { label: '活动评价', value: 'evaluation' }
 ]
 export const activityCategories = ['公益活动', '实践活动', '志愿服务', '讲座培训', '文体活动', '竞赛活动', '社团活动', '其他']
@@ -267,6 +267,7 @@ export function checkinModeText(activity) {
 export function feedbackTypeText(type) {
   const map = {
     suggestion: '活动建议',
+    problem: '问题反馈',
     issue: '问题反馈',
     evaluation: '活动评价'
   }

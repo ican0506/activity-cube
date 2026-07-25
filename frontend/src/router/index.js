@@ -24,6 +24,7 @@ const routes = [
   { path: '/admin/dashboard', component: () => import('../views/admin/DashboardView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/activity-reviews', component: () => import('../views/admin/ActivityReviewView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/operation-logs', component: () => import('../views/admin/OperationLogView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/feedbacks', component: () => import('../views/admin/ManagerFeedbackView.vue'), meta: { requiresAuth: true, requiresManager: true } },
   { path: '/admin/notices/system', component: () => import('../views/admin/SystemNoticeView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/users', component: () => import('../views/admin/AdminUsersView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/activities', component: () => import('../views/admin/AdminActivitiesView.vue'), meta: { requiresAuth: true, requiresManager: true } },

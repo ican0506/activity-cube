@@ -6,12 +6,15 @@ import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Feedback;
 import com.activitycube.entity.User;
+import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.UserMapper;
 import com.activitycube.util.ActivityStatusUtil;
+import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.FeedbackStats;
 import com.activitycube.vo.FeedbackView;
+import com.activitycube.vo.ManagerFeedbackView;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ import java.util.stream.IntStream;
 public class FeedbackService {
     public static final String TYPE_SUGGESTION = "suggestion";
     public static final String TYPE_ISSUE = "issue";
+    public static final String TYPE_PROBLEM = "problem";
     public static final String TYPE_EVALUATION = "evaluation";
 
     private final FeedbackMapper feedbackMapper;
@@ -35,6 +39,7 @@ public class FeedbackService {
     private final ActivityService activityService;
     private final UserMapper userMapper;
     private final CheckinMapper checkinMapper;
+    private final ActivityMapper activityMapper;
 
     public Feedback submit(Long activityId, FeedbackRequest request, User user) {
         Activity activity = activityService.requireActivity(activityId);
@@ -99,7 +104,7 @@ public class FeedbackService {
         stats.setActivityId(activityId);
         stats.setFeedbackCount((long) feedbacks.size());
         stats.setSuggestionCount(countType(feedbacks, TYPE_SUGGESTION));
-        stats.setIssueCount(countType(feedbacks, TYPE_ISSUE));
+        stats.setIssueCount(countType(feedbacks, TYPE_PROBLEM));
         stats.setEvaluationCount(countType(feedbacks, TYPE_EVALUATION));
         stats.setAverageScore(stats.getEvaluationCount() == 0
                 ? 0
@@ -111,6 +116,32 @@ public class FeedbackService {
                         .orElse(0));
         stats.setScoreDistribution(distribution);
         return stats;
+    }
+
+    public List<ManagerFeedbackView> listManagerFeedbacks(User user, String feedbackType) {
+        AuthUtil.requireOrganizerOrAdmin(user);
+        String normalizedType = normalizeFilterType(feedbackType);
+        List<Activity> activities = activityMapper.selectList(managerActivityQuery(user));
+        if (activities.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Activity> activityMap = activities.stream()
+                .collect(Collectors.toMap(Activity::getId, activity -> activity));
+        List<Long> activityIds = activities.stream().map(Activity::getId).toList();
+        LambdaQueryWrapper<Feedback> query = new LambdaQueryWrapper<Feedback>()
+                .in(Feedback::getActivityId, activityIds)
+                .orderByDesc(Feedback::getCreatedAt);
+        if (normalizedType != null) {
+            if (TYPE_PROBLEM.equals(normalizedType)) {
+                query.in(Feedback::getFeedbackType, TYPE_PROBLEM, TYPE_ISSUE);
+            } else {
+                query.eq(Feedback::getFeedbackType, normalizedType);
+            }
+        }
+        return feedbackMapper.selectList(query)
+                .stream()
+                .map(feedback -> toManagerView(feedback, activityMap.get(feedback.getActivityId())))
+                .toList();
     }
 
     private Integer resolveScore(FeedbackRequest request) {
@@ -141,6 +172,28 @@ public class FeedbackService {
         return view;
     }
 
+    private ManagerFeedbackView toManagerView(Feedback feedback, Activity activity) {
+        ManagerFeedbackView view = new ManagerFeedbackView();
+        view.setId(feedback.getId());
+        view.setActivityId(feedback.getActivityId());
+        view.setActivityName(activity == null ? "未知活动" : activity.getTitle());
+        view.setUserId(feedback.getUserId());
+        view.setStudentName(resolveStudentName(feedback));
+        view.setFeedbackType(resolveManagerFeedbackType(feedback.getFeedbackType()));
+        view.setContent(feedback.getContent());
+        view.setScore(feedback.getScore());
+        view.setCreatedAt(feedback.getCreatedAt());
+        return view;
+    }
+
+    private String resolveStudentName(Feedback feedback) {
+        if (Boolean.TRUE.equals(feedback.getAnonymous())) {
+            return "匿名同学";
+        }
+        User user = userMapper.selectById(feedback.getUserId());
+        return user == null ? "未知用户" : user.getRealName();
+    }
+
     private String resolveFeedbackType(FeedbackRequest request) {
         return resolveFeedbackType(request.getFeedbackType());
     }
@@ -149,10 +202,44 @@ public class FeedbackService {
         if (TYPE_SUGGESTION.equals(feedbackType)) {
             return TYPE_SUGGESTION;
         }
-        if (TYPE_ISSUE.equals(feedbackType)) {
-            return TYPE_ISSUE;
+        if (TYPE_ISSUE.equals(feedbackType) || TYPE_PROBLEM.equals(feedbackType)) {
+            return TYPE_PROBLEM;
         }
         return TYPE_EVALUATION;
+    }
+
+    private String resolveManagerFeedbackType(String feedbackType) {
+        if (TYPE_SUGGESTION.equals(feedbackType)) {
+            return TYPE_SUGGESTION;
+        }
+        if (TYPE_ISSUE.equals(feedbackType) || TYPE_PROBLEM.equals(feedbackType)) {
+            return TYPE_PROBLEM;
+        }
+        return TYPE_EVALUATION;
+    }
+
+    private String normalizeFilterType(String feedbackType) {
+        if (feedbackType == null || feedbackType.isBlank() || "all".equals(feedbackType)) {
+            return null;
+        }
+        if (TYPE_SUGGESTION.equals(feedbackType)) {
+            return TYPE_SUGGESTION;
+        }
+        if (TYPE_ISSUE.equals(feedbackType) || TYPE_PROBLEM.equals(feedbackType)) {
+            return TYPE_PROBLEM;
+        }
+        if (TYPE_EVALUATION.equals(feedbackType)) {
+            return TYPE_EVALUATION;
+        }
+        return null;
+    }
+
+    private LambdaQueryWrapper<Activity> managerActivityQuery(User user) {
+        LambdaQueryWrapper<Activity> query = new LambdaQueryWrapper<>();
+        if (!"admin".equals(user.getRole())) {
+            query.eq(Activity::getCreatorId, user.getId());
+        }
+        return query;
     }
 
     private void validateActivityAllowsFeedback(Activity activity) {

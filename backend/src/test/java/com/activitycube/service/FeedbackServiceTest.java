@@ -6,10 +6,12 @@ import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Feedback;
 import com.activitycube.entity.User;
+import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.UserMapper;
 import com.activitycube.vo.FeedbackView;
+import com.activitycube.vo.ManagerFeedbackView;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -30,7 +32,8 @@ class FeedbackServiceTest {
     private final ActivityService activityService = mock(ActivityService.class);
     private final UserMapper userMapper = mock(UserMapper.class);
     private final CheckinMapper checkinMapper = mock(CheckinMapper.class);
-    private final FeedbackService feedbackService = new FeedbackService(feedbackMapper, registrationService, activityService, userMapper, checkinMapper);
+    private final ActivityMapper activityMapper = mock(ActivityMapper.class);
+    private final FeedbackService feedbackService = new FeedbackService(feedbackMapper, registrationService, activityService, userMapper, checkinMapper, activityMapper);
 
     @Test
     void storesSuggestionAndAnonymousFlagWhenSubmittingFeedback() {
@@ -126,6 +129,34 @@ class FeedbackServiceTest {
         assertThat(views.get(0).getRealName()).isEqualTo("匿名同学");
         assertThat(views.get(1).getRealName()).isEqualTo("李四");
         verify(userMapper, never()).selectById(3L);
+    }
+
+    @Test
+    void organizerFeedbackInboxListsOnlyFeedbackFromOwnedActivities() {
+        Activity owned = new Activity();
+        owned.setId(10L);
+        owned.setTitle("校园摄影分享会");
+        owned.setCreatorId(2L);
+        when(activityMapper.selectList(any())).thenReturn(List.of(owned));
+        Feedback problem = feedback(5L, false);
+        problem.setId(99L);
+        problem.setActivityId(10L);
+        problem.setFeedbackType("issue");
+        problem.setContent("签到地点不清楚");
+        problem.setScore(null);
+        User student = new User();
+        student.setId(5L);
+        student.setRealName("张三");
+        when(feedbackMapper.selectList(any())).thenReturn(List.of(problem));
+        when(userMapper.selectById(5L)).thenReturn(student);
+
+        List<ManagerFeedbackView> views = feedbackService.listManagerFeedbacks(manager(), "problem");
+
+        assertThat(views).hasSize(1);
+        assertThat(views.get(0).getActivityName()).isEqualTo("校园摄影分享会");
+        assertThat(views.get(0).getStudentName()).isEqualTo("张三");
+        assertThat(views.get(0).getFeedbackType()).isEqualTo("problem");
+        assertThat(views.get(0).getContent()).isEqualTo("签到地点不清楚");
     }
 
     private Activity endedActivity() {

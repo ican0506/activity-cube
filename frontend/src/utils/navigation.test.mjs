@@ -22,7 +22,7 @@ test('admin navigation does not contain student personal pages', () => {
 test('organizer navigation focuses on management pages', () => {
   const labels = navItemsForRole('organizer').map((item) => item.label)
 
-  assert.deepEqual(labels, ['活动管理中心', '创建活动', '消息通知', '数据统计'])
+  assert.deepEqual(labels, ['活动管理中心', '创建活动', '消息反馈', '数据统计'])
 })
 
 test('scan shortcut belongs only to student roles', () => {

@@ -11,3 +11,7 @@ export function listFeedbacks(id) {
 export function getFeedbackStats(id) {
   return request.get(`/activities/${id}/feedback-stats`)
 }
+
+export function listManagerFeedbacks(params = {}) {
+  return request.get('/admin/feedbacks', { params })
+}

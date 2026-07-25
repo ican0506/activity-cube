@@ -156,13 +156,13 @@ function displayName(item) {
 }
 
 function feedbackTypeTag(type) {
-  if (type === 'issue') return 'warning'
+  if (type === 'issue' || type === 'problem') return 'warning'
   if (type === 'evaluation') return 'success'
   return 'primary'
 }
 
 function feedbackContentLabel(type) {
-  if (type === 'issue') return '问题描述'
+  if (type === 'issue' || type === 'problem') return '问题描述'
   if (type === 'evaluation') return '活动体验'
   return '活动建议'
 }

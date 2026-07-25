@@ -50,7 +50,7 @@
           title="可以提前反馈你对活动时间、地点、内容安排的建议。"
         />
         <el-alert
-          v-if="form.feedbackType === 'issue'"
+          v-if="form.feedbackType === 'problem'"
           class="qr-tip"
           type="warning"
           :closable="false"
@@ -159,7 +159,7 @@ const evaluationAvailable = computed(() => activity.value?.checkedIn || activity
 const availableFeedbackTypes = computed(() => {
   const types = [
     { label: '活动建议', value: 'suggestion' },
-    { label: '问题反馈', value: 'issue' }
+    { label: '问题反馈', value: 'problem' }
   ]
   if (evaluationAvailable.value) {
     types.push({ label: '活动评价', value: 'evaluation' })
@@ -168,12 +168,12 @@ const availableFeedbackTypes = computed(() => {
 })
 const currentFeedbackTypeText = computed(() => feedbackTypeText(form.feedbackType))
 const contentLabel = computed(() => {
-  if (form.feedbackType === 'issue') return '问题描述'
+  if (form.feedbackType === 'problem') return '问题描述'
   if (form.feedbackType === 'evaluation') return '活动体验'
   return '活动建议'
 })
 const contentPlaceholder = computed(() => {
-  if (form.feedbackType === 'issue') return '请描述报名、地点、通知或活动安排中遇到的问题'
+  if (form.feedbackType === 'problem') return '请描述报名、地点、通知或活动安排中遇到的问题'
   if (form.feedbackType === 'evaluation') return '可以写下活动流程、现场体验、组织服务等感受'
   return '可以写下你对活动时间、地点、内容安排的建议'
 })

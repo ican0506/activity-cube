@@ -7,7 +7,7 @@ const studentNav = [
 const organizerNav = [
   { label: '活动管理中心', to: '/admin/activities' },
   { label: '创建活动', to: '/admin/activities/create' },
-  { label: '消息通知', to: '/admin/activities' },
+  { label: '消息反馈', to: '/admin/feedbacks' },
   { label: '数据统计', to: '/admin/dashboard' }
 ]
 

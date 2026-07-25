@@ -70,6 +70,7 @@ test('published activity can submit feedback suggestions before it ends', () => 
   assert.equal(canFeedback({ status: 'PENDING_REVIEW' }), false)
   assert.equal(feedbackDisabledReason({ status: 'PENDING_REVIEW' }), '活动正在审核中')
   assert.equal(feedbackTypeText('suggestion'), '活动建议')
+  assert.equal(feedbackTypeText('problem'), '问题反馈')
   assert.equal(feedbackTypeText('issue'), '问题反馈')
   assert.equal(feedbackTypeText('evaluation'), '活动评价')
 })
