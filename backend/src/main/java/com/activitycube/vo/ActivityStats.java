@@ -9,12 +9,14 @@ public class ActivityStats {
     private Long activityId;
     private Long registrationCount;
     private Long checkinCount;
+    private Long absentCount;
     private Long absenceCount;
     private Double checkinRate;
     private Double registrationToCheckinRate;
     private Double checkinToFeedbackRate;
     private Double registrationToFeedbackRate;
     private Long feedbackCount;
+    private Double averageScore;
     private Double averageRating;
     private List<CampusStat> campusStats;
 }

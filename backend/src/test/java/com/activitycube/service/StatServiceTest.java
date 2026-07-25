@@ -42,6 +42,42 @@ class StatServiceTest {
         assertThat(stats.getRegistrationToFeedbackRate()).isEqualTo(25.0);
     }
 
+    @Test
+    void returnsZeroStatsWhenActivityHasNoData() {
+        when(registrationService.registrations(2L)).thenReturn(List.of());
+        when(checkinService.checkins(2L)).thenReturn(List.of());
+        when(feedbackMapper.selectList(any())).thenReturn(List.of());
+
+        ActivityStats stats = statService.activityStats(2L);
+
+        assertThat(stats.getRegistrationCount()).isZero();
+        assertThat(stats.getCheckinCount()).isZero();
+        assertThat(stats.getAbsentCount()).isZero();
+        assertThat(stats.getAbsenceCount()).isZero();
+        assertThat(stats.getCheckinRate()).isZero();
+        assertThat(stats.getFeedbackCount()).isZero();
+        assertThat(stats.getAverageScore()).isZero();
+        assertThat(stats.getAverageRating()).isZero();
+        assertThat(stats.getCampusStats()).isEmpty();
+    }
+
+    @Test
+    void ignoresFeedbackWithoutScoreWhenCalculatingAverageScore() {
+        when(registrationService.registrations(3L)).thenReturn(List.of(registration(1L), registration(2L)));
+        when(checkinService.checkins(3L)).thenReturn(List.of(checkin(1L)));
+        Feedback suggestion = feedback(1L);
+        suggestion.setScore(null);
+        Feedback evaluation = feedback(2L);
+        evaluation.setScore(4);
+        when(feedbackMapper.selectList(any())).thenReturn(List.of(suggestion, evaluation));
+
+        ActivityStats stats = statService.activityStats(3L);
+
+        assertThat(stats.getFeedbackCount()).isEqualTo(2);
+        assertThat(stats.getAverageScore()).isEqualTo(4.0);
+        assertThat(stats.getAverageRating()).isEqualTo(4.0);
+    }
+
     private Registration registration(Long id) {
         Registration registration = new Registration();
         registration.setId(id);
