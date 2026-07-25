@@ -45,3 +45,39 @@ WHERE feedback_type IS NULL OR feedback_type = '';
 UPDATE feedback
 SET handle_status = 'pending'
 WHERE handle_status IS NULL OR handle_status = '';
+
+SET @old_unique_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'feedback'
+    AND INDEX_NAME = 'uk_feedback_activity_user'
+);
+
+SET @ddl := IF(
+  @old_unique_exists > 0,
+  'ALTER TABLE feedback DROP INDEX uk_feedback_activity_user',
+  'SELECT ''uk_feedback_activity_user not exists'' AS message'
+);
+
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @normal_index_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'feedback'
+    AND INDEX_NAME = 'idx_feedback_activity_user'
+);
+
+SET @ddl := IF(
+  @normal_index_exists = 0,
+  'ALTER TABLE feedback ADD INDEX idx_feedback_activity_user(activity_id, user_id)',
+  'SELECT ''idx_feedback_activity_user already exists'' AS message'
+);
+
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

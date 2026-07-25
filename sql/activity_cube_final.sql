@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `title` VARCHAR(100) NOT NULL COMMENT '活动名称',
   `description` TEXT NOT NULL COMMENT '活动介绍',
   `cover_url` VARCHAR(500) DEFAULT NULL COMMENT '活动封面图URL',
-  `activity_mode` VARCHAR(20) NOT NULL DEFAULT 'offline' COMMENT '活动形式：online线上活动/offline线下活动',
+  `activity_mode` VARCHAR(20) NOT NULL DEFAULT 'offline' COMMENT '活动形式：online线上活动/offline线下活动/hybrid混合活动',
+  `checkin_mode` VARCHAR(20) NOT NULL DEFAULT 'qr' COMMENT '签到方式：online线上签到/qr现场扫码签到/both两种都支持',
   `activity_category` VARCHAR(50) NOT NULL DEFAULT '其他' COMMENT '活动类型',
   `checkin_code` VARCHAR(64) DEFAULT NULL COMMENT '签到码：线下活动现场扫码签到校验使用',
   `campus` VARCHAR(50) NOT NULL COMMENT '活动校区：全校区/龙子湖校区/文化路校区/许昌校区/线上',
@@ -75,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
   KEY `idx_activity_checkin_code` (`checkin_code`),
   CONSTRAINT `fk_activity_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`),
   CONSTRAINT `chk_activity_mode` CHECK (`activity_mode` IN ('online', 'offline', 'hybrid')),
+  CONSTRAINT `chk_activity_checkin_mode` CHECK (`checkin_mode` IN ('online', 'qr', 'both')),
   CONSTRAINT `chk_activity_campus` CHECK (`campus` IN ('全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上')),
   CONSTRAINT `chk_activity_workflow_status` CHECK (`status` IN ('DRAFT', 'PENDING_REVIEW', 'REJECTED', 'PUBLISHED', 'CANCELLED')),
   CONSTRAINT `chk_activity_max_participants` CHECK (`max_participants` IS NULL OR `max_participants` > 0),
@@ -132,18 +134,23 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '反馈记录ID',
   `activity_id` BIGINT NOT NULL COMMENT '活动ID',
   `user_id` BIGINT NOT NULL COMMENT '反馈用户ID',
-  `score` INT NOT NULL COMMENT '满意度评分：1-5分',
-  `content` VARCHAR(1000) DEFAULT NULL COMMENT '活动体验',
+  `feedback_type` VARCHAR(20) NOT NULL DEFAULT 'evaluation' COMMENT '反馈类型：suggestion活动建议/issue问题反馈/evaluation活动评价',
+  `score` INT DEFAULT NULL COMMENT '满意度评分：1-5分，仅活动评价必填',
+  `content` VARCHAR(1000) NOT NULL COMMENT '反馈内容',
   `suggestion` VARCHAR(1000) DEFAULT NULL COMMENT '改进建议',
+  `handle_status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '处理状态：pending未处理/viewed已查看/resolved已处理',
   `anonymous` TINYINT NOT NULL DEFAULT 0 COMMENT '是否匿名：1匿名，0实名',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_feedback_activity_user` (`activity_id`, `user_id`),
+  KEY `idx_feedback_activity_user` (`activity_id`, `user_id`),
+  KEY `idx_feedback_type` (`feedback_type`),
   KEY `idx_feedback_user` (`user_id`),
   CONSTRAINT `fk_feedback_activity` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
-  CONSTRAINT `chk_feedback_score` CHECK (`score` BETWEEN 1 AND 5)
+  CONSTRAINT `chk_feedback_type` CHECK (`feedback_type` IN ('suggestion', 'issue', 'evaluation')),
+  CONSTRAINT `chk_feedback_handle_status` CHECK (`handle_status` IN ('pending', 'viewed', 'resolved')),
+  CONSTRAINT `chk_feedback_score` CHECK (`score` IS NULL OR `score` BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='反馈表';
 
 CREATE TABLE IF NOT EXISTS `activity_media` (
@@ -290,10 +297,10 @@ VALUES
 ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `status` = 1, `update_time` = NOW();
 
 INSERT INTO `activity`
-(`id`, `title`, `description`, `activity_mode`, `activity_category`, `checkin_code`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `checkin_start_time`, `checkin_end_time`, `max_participants`, `allow_cross_campus`, `reward_enabled`, `reward_type`, `reward_hours`, `reward_points`, `reward_description`, `status`, `creator_id`)
+(`id`, `title`, `description`, `activity_mode`, `checkin_mode`, `activity_category`, `checkin_code`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `checkin_start_time`, `checkin_end_time`, `max_participants`, `allow_cross_campus`, `reward_enabled`, `reward_type`, `reward_hours`, `reward_points`, `reward_description`, `status`, `creator_id`)
 VALUES
-(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', 'offline', '文体活动', REPLACE(UUID(), '-', ''), '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-21 14:00:00', '2026-07-21 16:00:00', '2026-07-15 08:00:00', '2026-07-21 12:00:00', '2026-07-21 13:30:00', '2026-07-21 16:30:00', 120, 0, 1, '课外学时', 2.0, 0, '完成签到后获得 2 课外学时', 'PUBLISHED', 2),
-(2, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', 'online', '讲座培训', REPLACE(UUID(), '-', ''), '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', '2026-07-25 18:45:00', '2026-07-25 21:00:00', 500, 1, 0, '无', 0.0, 0, NULL, 'PUBLISHED', 2)
+(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', 'offline', 'qr', '文体活动', REPLACE(UUID(), '-', ''), '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-21 14:00:00', '2026-07-21 16:00:00', '2026-07-15 08:00:00', '2026-07-21 12:00:00', '2026-07-21 13:30:00', '2026-07-21 16:30:00', 120, 0, 1, '课外学时', 2.0, 0, '完成签到后获得 2 课外学时', 'PUBLISHED', 2),
+(2, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', 'online', 'online', '讲座培训', REPLACE(UUID(), '-', ''), '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', '2026-07-25 18:45:00', '2026-07-25 21:00:00', 500, 1, 0, '无', 0.0, 0, NULL, 'PUBLISHED', 2)
 ON DUPLICATE KEY UPDATE `update_time` = NOW();
 
 INSERT INTO `registration`
