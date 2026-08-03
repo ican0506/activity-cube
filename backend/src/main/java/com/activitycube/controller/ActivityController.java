@@ -4,9 +4,11 @@ import com.activitycube.common.Result;
 import com.activitycube.dto.ActivityRequest;
 import com.activitycube.dto.RejectActivityRequest;
 import com.activitycube.entity.Activity;
+import com.activitycube.service.ActivityRecommendationService;
 import com.activitycube.service.ActivityService;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.ActivityDetail;
+import com.activitycube.vo.ActivityRecommendationVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,12 +28,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ActivityController {
     private final ActivityService activityService;
+    private final ActivityRecommendationService activityRecommendationService;
 
     @GetMapping
     public Result<List<Activity>> list(@RequestParam(required = false) String keyword,
                                        @RequestParam(required = false) String campus,
                                        @RequestParam(required = false) String status) {
         return Result.success(activityService.list(keyword, campus, status));
+    }
+
+    @GetMapping("/recommendations")
+    public Result<List<ActivityRecommendationVO>> recommendations() {
+        return Result.success(activityRecommendationService.recommendForStudent(AuthUtil.requireUser()));
     }
 
     @GetMapping("/{id}")

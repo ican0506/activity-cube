@@ -44,7 +44,23 @@
           <h2>基础信息</h2>
         </div>
         <el-form-item label="活动名称"><el-input v-model="form.title" :disabled="isPublishedWorkflow && !isAdmin" placeholder="例如：校园志愿服务招募" /></el-form-item>
-        <el-form-item label="活动介绍"><el-input v-model="form.description" type="textarea" :rows="4" /></el-form-item>
+        <el-form-item label="活动介绍">
+          <div class="description-ai-field">
+            <el-input v-model="form.description" type="textarea" :rows="4" />
+            <div class="ai-copy-action-row">
+              <el-button
+                type="primary"
+                plain
+                :loading="aiGenerating"
+                :disabled="!canGenerateAiCopywriting || aiGenerating"
+                @click="generateCopywriting"
+              >
+                AI生成活动文案
+              </el-button>
+              <span>根据当前活动名称、类型、校区、时间和地点生成可编辑文案。</span>
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="活动类型">
           <el-select v-model="form.activityCategory" :disabled="!canEditCoreFields">
             <el-option v-for="item in activityCategories" :key="item" :label="item" :value="item" />
@@ -197,6 +213,46 @@
       </div>
     </el-form>
 
+    <el-dialog v-model="aiDialogVisible" title="AI 活动文案预览" width="720px" class="ai-copy-dialog">
+      <div v-if="aiResult" class="ai-copy-preview">
+        <div class="ai-copy-block">
+          <span>宣传标题</span>
+          <strong>{{ aiResult.title }}</strong>
+          <el-button size="small" :disabled="isPublishedWorkflow && !isAdmin" @click="applyAiTitle">应用活动标题</el-button>
+        </div>
+
+        <div class="ai-copy-block">
+          <span>活动简介</span>
+          <p>{{ aiResult.summary }}</p>
+          <el-button size="small" @click="applyAiSummary">应用活动简介</el-button>
+        </div>
+
+        <div class="ai-copy-block">
+          <span>活动亮点</span>
+          <ul>
+            <li v-for="item in aiResult.highlights || []" :key="item">{{ item }}</li>
+          </ul>
+        </div>
+
+        <div class="ai-copy-block">
+          <span>报名须知</span>
+          <p>{{ aiResult.registrationNotice }}</p>
+          <el-button size="small" @click="applyAiRegistrationNotice">追加报名须知</el-button>
+        </div>
+
+        <div class="ai-copy-block">
+          <span>社群宣传文案</span>
+          <p>{{ aiResult.socialText }}</p>
+          <el-button size="small" type="primary" plain @click="copyAiSocialText">复制社群宣传文案</el-button>
+        </div>
+      </div>
+      <template #footer>
+        <el-button :loading="aiGenerating" :disabled="aiGenerating" @click="generateCopywriting">重新生成</el-button>
+        <el-button type="primary" :disabled="!aiResult" @click="applyAiAll">应用全部内容</el-button>
+        <el-button @click="aiDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <div class="edit-action-bar">
       <RouterLink :to="isEdit ? `/activities/${route.params.id}` : '/admin/activities'">
         <el-button>返回</el-button>
@@ -214,9 +270,16 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { cancelActivity, createActivity, getActivity, submitActivityReview, updateActivity } from '../../api/activity'
+import { generateActivityCopywriting } from '../../api/ai'
 import { resolveFileUrl, uploadFile } from '../../api/file'
 import { listActivityMedia, saveActivityMedia } from '../../api/media'
 import { useUserStore } from '../../stores/user'
+import {
+  appendRegistrationNotice,
+  buildAppliedCopywritingDescription,
+  buildActivityCopywritingPayload,
+  canGenerateActivityCopywriting
+} from '../../utils/activityCopywriting'
 import {
   activityCampuses,
   activityCategories,
@@ -236,6 +299,9 @@ const saving = ref(false)
 const coverFileList = ref([])
 const mediaFileList = ref([])
 const mediaItems = ref([])
+const aiGenerating = ref(false)
+const aiDialogVisible = ref(false)
+const aiResult = ref(null)
 const displayStatus = ref('DRAFT')
 const reviewStatus = ref('DRAFT')
 const rejectReason = ref('')
@@ -246,6 +312,7 @@ const isAdmin = computed(() => userStore.role === 'admin')
 const isPublishedWorkflow = computed(() => reviewStatus.value === 'PUBLISHED')
 const canEditCoreFields = computed(() => !isPublishedWorkflow.value || isAdmin.value)
 const canSaveExistingChanges = computed(() => isEdit.value && ['PENDING_REVIEW', 'PUBLISHED'].includes(reviewStatus.value))
+const canGenerateAiCopywriting = computed(() => canGenerateActivityCopywriting(form))
 const form = reactive({
   title: '',
   description: '',
@@ -359,6 +426,59 @@ async function cancelCurrentActivity() {
     router.push('/admin/activities')
   } finally {
     saving.value = false
+  }
+}
+
+async function generateCopywriting() {
+  if (!canGenerateAiCopywriting.value) {
+    ElMessage.warning('请先填写活动名称')
+    return
+  }
+  aiGenerating.value = true
+  try {
+    aiResult.value = null
+    aiResult.value = await generateActivityCopywriting(buildActivityCopywritingPayload(form))
+    aiDialogVisible.value = true
+  } finally {
+    aiGenerating.value = false
+  }
+}
+
+function applyAiTitle() {
+  if (!aiResult.value?.title) return
+  form.title = aiResult.value.title
+  ElMessage.success('已应用活动标题')
+}
+
+function applyAiSummary() {
+  if (!aiResult.value?.summary) return
+  form.description = aiResult.value.summary
+  ElMessage.success('已应用活动简介')
+}
+
+function applyAiRegistrationNotice() {
+  if (!aiResult.value?.registrationNotice) return
+  form.description = appendRegistrationNotice(form.description, aiResult.value.registrationNotice)
+  ElMessage.success('已追加报名须知')
+}
+
+function applyAiAll() {
+  if (!aiResult.value) return
+  if (!isPublishedWorkflow.value || isAdmin.value) {
+    form.title = aiResult.value.title || form.title
+  }
+  form.description = buildAppliedCopywritingDescription(aiResult.value) || form.description
+  ElMessage.success('已应用 AI 生成内容')
+  aiDialogVisible.value = false
+}
+
+async function copyAiSocialText() {
+  if (!aiResult.value?.socialText) return
+  try {
+    await navigator.clipboard.writeText(aiResult.value.socialText)
+    ElMessage.success('社群宣传文案已复制')
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
   }
 }
 
@@ -502,6 +622,7 @@ function criticalChanged() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
@@ -542,6 +663,62 @@ function criticalChanged() {
   border-color: var(--ac-primary);
 }
 
+.description-ai-field {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.ai-copy-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ai-copy-action-row span {
+  color: var(--ac-muted);
+  font-size: 13px;
+}
+
+.ai-copy-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-copy-block {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--ac-border);
+  border-radius: 14px;
+  padding: 14px;
+  background: #f8fcfa;
+}
+
+.ai-copy-block span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ac-primary);
+}
+
+.ai-copy-block strong {
+  color: var(--ac-text);
+  font-size: 18px;
+}
+
+.ai-copy-block p {
+  margin: 0;
+  color: var(--ac-muted);
+  line-height: 1.8;
+}
+
+.ai-copy-block ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ac-muted);
+  line-height: 1.8;
+}
+
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;
@@ -554,6 +731,16 @@ function criticalChanged() {
 
   .edit-action-bar > * {
     flex: 1 1 auto;
+  }
+
+  .form-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-copy-action-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>

@@ -91,7 +91,14 @@ DB_USER=root
 DB_PASSWORD=你的数据库密码
 UPLOAD_DIR=uploads
 FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+AI_ENABLED=false
+AI_BASE_URL=https://api.openai.com/v1
+AI_API_KEY=
+AI_MODEL=gpt-4o-mini
+AI_TIMEOUT_SECONDS=30
 ```
+
+AI 文案生成功能默认关闭。需要使用时再配置 `AI_ENABLED=true` 和真实 `AI_API_KEY`；不要把真实 API Key 写入代码、`.env.example` 或提交到 GitHub。
 
 命令行启动：
 

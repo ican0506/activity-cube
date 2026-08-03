@@ -70,8 +70,75 @@
           <span>签到 {{ stats.checkinCount || 0 }}</span>
           <span>反馈 {{ feedbackStats.feedbackCount || 0 }}</span>
         </div>
+        <el-button
+          type="primary"
+          :loading="summaryLoading"
+          class="ai-summary-action"
+          @click="generateSummary"
+        >
+          生成 AI 活动复盘
+        </el-button>
       </div>
     </div>
+
+    <el-drawer v-model="summaryVisible" size="560px" class="ai-summary-drawer" title="AI 活动复盘">
+      <div v-if="summaryResult" class="ai-summary-result">
+        <el-alert
+          v-if="summaryResult.phaseSummary"
+          title="当前活动尚未结束，以下内容为阶段性总结。"
+          type="info"
+          :closable="false"
+          show-icon
+        />
+
+        <section class="summary-section">
+          <h3>活动概况</h3>
+          <p>{{ summaryResult.overview || '暂无内容' }}</p>
+        </section>
+        <section class="summary-section">
+          <h3>数据分析</h3>
+          <p>{{ summaryResult.dataAnalysis || '暂无内容' }}</p>
+        </section>
+        <section class="summary-section">
+          <h3>活动亮点</h3>
+          <ol v-if="summaryResult.highlights?.length">
+            <li v-for="item in summaryResult.highlights" :key="item">{{ item }}</li>
+          </ol>
+          <p v-else>暂无内容</p>
+        </section>
+        <section class="summary-section">
+          <h3>用户反馈</h3>
+          <p>{{ summaryResult.feedbackSummary || '暂无内容' }}</p>
+        </section>
+        <section class="summary-section">
+          <h3>存在问题</h3>
+          <ol v-if="summaryResult.problems?.length">
+            <li v-for="item in summaryResult.problems" :key="item">{{ item }}</li>
+          </ol>
+          <p v-else>暂无内容</p>
+        </section>
+        <section class="summary-section">
+          <h3>优化建议</h3>
+          <ol v-if="summaryResult.suggestions?.length">
+            <li v-for="item in summaryResult.suggestions" :key="item">{{ item }}</li>
+          </ol>
+          <p v-else>暂无内容</p>
+        </section>
+        <section class="summary-section">
+          <h3>下一步行动</h3>
+          <p>{{ summaryResult.nextAction || '暂无内容' }}</p>
+        </section>
+      </div>
+      <el-empty v-else description="点击生成后查看 AI 活动复盘" />
+
+      <template #footer>
+        <div class="summary-drawer-actions">
+          <el-button @click="summaryVisible = false">关闭</el-button>
+          <el-button :loading="summaryLoading" @click="generateSummary">重新生成</el-button>
+          <el-button type="primary" :disabled="!summaryResult" @click="copySummaryReport">复制报告</el-button>
+        </div>
+      </template>
+    </el-drawer>
   </section>
 </template>
 
@@ -81,11 +148,13 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { getActivity } from '../../api/activity'
+import { generateActivitySummary } from '../../api/ai'
 import { listAbsentees } from '../../api/checkin'
 import { getFeedbackStats } from '../../api/feedback'
 import { getActivityStats } from '../../api/stat'
 import { exportRosterExcel } from '../../utils/excelExport'
 import { recordFrontendExport } from '../../api/export'
+import { buildActivitySummaryReport } from '../../utils/activitySummary'
 
 const route = useRoute()
 const stats = ref({})
@@ -93,6 +162,9 @@ const feedbackStats = ref({ feedbackCount: 0, averageScore: 0 })
 const activity = ref(null)
 const chart = ref(null)
 const loading = ref(false)
+const summaryLoading = ref(false)
+const summaryVisible = ref(false)
+const summaryResult = ref(null)
 let chartInstance = null
 const campusStats = computed(() => stats.value.campusStats || [])
 const aiSummary = computed(() => {
@@ -165,6 +237,29 @@ async function downloadAbsentees() {
   })
   await recordFrontendExport(route.params.id, 'absences')
   ElMessage.success('未签到名单已导出')
+}
+
+async function generateSummary() {
+  if (summaryLoading.value) return
+  summaryLoading.value = true
+  try {
+    summaryResult.value = await generateActivitySummary(route.params.id)
+    summaryVisible.value = true
+    ElMessage.success('AI 活动复盘已生成')
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+async function copySummaryReport() {
+  if (!summaryResult.value) return
+  const report = buildActivitySummaryReport(summaryResult.value)
+  try {
+    await navigator.clipboard.writeText(report)
+    ElMessage.success('活动复盘报告已复制')
+  } catch {
+    ElMessage.error('复制失败，请手动选择内容复制')
+  }
 }
 
 onMounted(() => {
