@@ -73,24 +73,18 @@
         <el-button
           type="primary"
           :loading="summaryLoading"
+          :disabled="!canGenerateSummary"
           class="ai-summary-action"
           @click="generateSummary"
         >
           生成 AI 活动复盘
         </el-button>
+        <p v-if="!canGenerateSummary" class="summary-disabled-tip">{{ summaryDisabledReason }}</p>
       </div>
     </div>
 
     <el-drawer v-model="summaryVisible" size="560px" class="ai-summary-drawer" title="AI 活动复盘">
       <div v-if="summaryResult" class="ai-summary-result">
-        <el-alert
-          v-if="summaryResult.phaseSummary"
-          title="当前活动尚未结束，以下内容为阶段性总结。"
-          type="info"
-          :closable="false"
-          show-icon
-        />
-
         <section class="summary-section">
           <h3>活动概况</h3>
           <p>{{ summaryResult.overview || '暂无内容' }}</p>
@@ -134,7 +128,7 @@
       <template #footer>
         <div class="summary-drawer-actions">
           <el-button @click="summaryVisible = false">关闭</el-button>
-          <el-button :loading="summaryLoading" @click="generateSummary">重新生成</el-button>
+          <el-button :loading="summaryLoading" :disabled="!canGenerateSummary" @click="generateSummary">重新生成</el-button>
           <el-button type="primary" :disabled="!summaryResult" @click="copySummaryReport">复制报告</el-button>
         </div>
       </template>
@@ -172,6 +166,11 @@ const aiSummary = computed(() => {
   const score = Number(feedbackStats.value.averageScore || 0).toFixed(1)
   if (!stats.value.registrationCount) return '当前活动暂无报名数据，发布后可在这里查看报名、签到与反馈的复盘摘要。'
   return `本次活动报名 ${stats.value.registrationCount || 0} 人，签到率 ${signRate}%，平均满意度 ${score} 分。可结合未签到名单和反馈内容优化下次组织节奏。`
+})
+const canGenerateSummary = computed(() => activity.value?.status === 'ENDED')
+const summaryDisabledReason = computed(() => {
+  if (!activity.value) return '活动信息加载完成后才可以生成复盘。'
+  return '活动结束后才可以生成 AI 活动复盘。'
 })
 
 function formatRate(value) {
@@ -241,6 +240,10 @@ async function downloadAbsentees() {
 
 async function generateSummary() {
   if (summaryLoading.value) return
+  if (!canGenerateSummary.value) {
+    ElMessage.warning(summaryDisabledReason.value)
+    return
+  }
   summaryLoading.value = true
   try {
     summaryResult.value = await generateActivitySummary(route.params.id)
