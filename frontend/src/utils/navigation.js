@@ -1,19 +1,21 @@
 const studentNav = [
+  { label: 'Dashboard', to: '/' },
   { label: '活动大厅', to: '/activities' },
   { label: '消息中心', to: '/messages', badge: 'messages' },
   { label: '我的活动', to: '/my-activities' }
 ]
 
 const organizerNav = [
-  { label: '活动管理中心', to: '/admin/activities' },
-  { label: '创建活动', to: '/admin/activities/create' },
+  { label: 'Dashboard', to: '/' },
+  { label: '活动管理', to: '/admin/activities' },
   { label: '消息反馈', to: '/admin/feedbacks' },
   { label: '数据统计', to: '/admin/dashboard' }
 ]
 
 const adminNav = [
+  { label: 'Dashboard', to: '/' },
   { label: '数据总览', to: '/admin/dashboard' },
-  { label: '活动管理中心', to: '/admin/activities' },
+  { label: '活动管理', to: '/admin/activities' },
   { label: '活动审核', to: '/admin/activity-reviews' },
   { label: '用户管理', to: '/admin/users' },
   { label: '系统通知', to: '/admin/notices/system' },
