@@ -73,7 +73,7 @@ class ActivitySummaryAiServiceTest {
         mockContextData(operator);
         when(aiService.completeJson(any())).thenReturn("""
                 {
-                  "overview": "本次活动围绕校园志愿服务开展，目前可作为阶段性总结。",
+                  "overview": "本次活动围绕校园志愿服务开展，已完成报名、签到和反馈闭环。",
                   "dataAnalysis": "活动报名20人，签到16人，签到率80.0%。",
                   "highlights": ["报名参与较积极", "签到转化较稳定", "反馈整体较正向"],
                   "feedbackSummary": "学生反馈集中在组织流程和物资准备。",
@@ -85,17 +85,16 @@ class ActivitySummaryAiServiceTest {
 
         ActivitySummaryResult result = service.generateSummary(8L, operator);
 
-        assertThat(result.getOverview()).contains("阶段性总结");
+        assertThat(result.getOverview()).contains("志愿服务");
         assertThat(result.getHighlights()).hasSize(3);
         assertThat(result.getProblems()).hasSize(1);
         assertThat(result.getSuggestions()).hasSize(2);
-        assertThat(result.getPhaseSummary()).isTrue();
+        assertThat(result.getPhaseSummary()).isFalse();
         assertThat(result.getGeneratedAt()).isNotNull();
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(aiService).completeJson(promptCaptor.capture());
         assertThat(promptCaptor.getValue())
                 .contains("只能基于真实统计数据")
-                .contains("当前为阶段性总结")
                 .doesNotContain("13800000000")
                 .doesNotContain("2321241389");
         ArgumentCaptor<AiGenerationLog> logCaptor = ArgumentCaptor.forClass(AiGenerationLog.class);
@@ -172,14 +171,31 @@ class ActivitySummaryAiServiceTest {
         verify(logMapper, never()).insert(any(AiGenerationLog.class));
     }
 
+    @Test
+    void rejectsSummaryWhenActivityHasNotEnded() {
+        User operator = organizer();
+        Activity ongoing = activity();
+        ongoing.setStartTime(LocalDateTime.now().minusMinutes(30));
+        ongoing.setEndTime(LocalDateTime.now().plusMinutes(30));
+        when(activityService.requireManageableActivity(8L, operator)).thenReturn(ongoing);
+
+        assertThatThrownBy(() -> service.generateSummary(8L, operator))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("活动结束后才可以生成 AI 活动复盘");
+
+        verify(statService, never()).activityStats(8L);
+        verify(aiService, never()).completeJson(any());
+        verify(logMapper, never()).insert(any(AiGenerationLog.class));
+    }
+
     private Activity activity() {
         Activity activity = new Activity();
         activity.setId(8L);
         activity.setTitle("校园志愿服务活动");
         activity.setActivityCategory("志愿服务");
         activity.setCampus("龙子湖校区");
-        activity.setStartTime(LocalDateTime.of(2026, 8, 5, 9, 0));
-        activity.setEndTime(LocalDateTime.of(2026, 8, 5, 11, 0));
+        activity.setStartTime(LocalDateTime.of(2026, 7, 20, 9, 0));
+        activity.setEndTime(LocalDateTime.of(2026, 7, 20, 11, 0));
         activity.setStatus("PUBLISHED");
         return activity;
     }

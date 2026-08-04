@@ -2,45 +2,48 @@
   <article class="activity-card agri-card">
     <div class="activity-cover">
       <img v-if="activity.coverUrl" :src="resolveFileUrl(activity.coverUrl)" :alt="activity.title" />
+      <div v-else class="activity-cover-fallback">
+        <span>{{ activityCategoryText(activity) }}</span>
+      </div>
       <span class="activity-cover-badge">
         <el-icon><School /></el-icon>
-        {{ activity.campus || '校园活动' }}
+        {{ activityCampusText(activity) }}
       </span>
     </div>
 
     <div class="activity-card-body">
       <div class="activity-card-top">
         <h3>{{ activity.title }}</h3>
-        <el-tag size="small" :type="studentActivityStatusTagType(activity)">
+        <el-tag size="small" :type="studentActivityStatusTagType(activity)" round>
           {{ studentActivityStatusText(activity) }}
         </el-tag>
       </div>
 
-      <div class="activity-fact-list">
+      <div class="activity-fact-list compact">
         <span>
           <el-icon><Calendar /></el-icon>
-          {{ activity.startTime || '时间待定' }}
+          {{ formatDateTime(activity.startTime) }}
         </span>
         <span>
           <el-icon><Location /></el-icon>
           {{ activityLocationText(activity) }}
         </span>
-        <span>
-          <el-icon><School /></el-icon>
-          {{ activityCampusText(activity) }}
-        </span>
       </div>
 
       <div class="activity-card-tags">
-        <span class="wheat-badge">{{ activityModeText(activity) }}</span>
-        <span class="wheat-badge">{{ activityCategoryText(activity) }}</span>
-        <span class="wheat-badge">报名 {{ registrationCountText(activity) }}</span>
+        <span class="ds-mini-tag">{{ activityModeText(activity) }}</span>
+        <span class="ds-mini-tag">{{ activityCategoryText(activity) }}</span>
+        <span class="ds-mini-tag">报名 {{ registrationCountText(activity) }}</span>
+        <span class="ds-mini-tag">{{ activity.allowCrossCampus ? '允许跨校区' : '限本校区' }}</span>
       </div>
-      <p v-if="activity.rewardEnabled" class="page-subtitle">活动奖励：{{ rewardSummary(activity) }}</p>
+
+      <p v-if="activity.rewardEnabled" class="activity-reward-line">
+        {{ rewardSummary(activity) }}
+      </p>
 
       <div class="activity-actions">
         <RouterLink :to="`/activities/${activity.id}`">
-          <el-button type="primary" :icon="Tickets">查看详情</el-button>
+          <el-button :icon="Tickets">详情</el-button>
         </RouterLink>
         <RouterLink v-if="action.to !== 'none'" :to="actionTarget">
           <el-button :type="action.type" :icon="Right" :disabled="action.disabled">{{ action.label }}</el-button>
@@ -91,4 +94,8 @@ const actionTarget = computed(() => {
   }
   return map[action.value.to] || `/activities/${id}`
 })
+
+function formatDateTime(value) {
+  return value ? String(value).replace('T', ' ').slice(0, 16) : '时间待定'
+}
 </script>

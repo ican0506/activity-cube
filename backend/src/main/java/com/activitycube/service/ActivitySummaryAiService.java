@@ -54,6 +54,10 @@ public class ActivitySummaryAiService {
 
     public ActivitySummaryContext buildSummaryContext(Long activityId, User operator) {
         Activity activity = activityService.requireManageableActivity(activityId, operator);
+        String calculatedStatus = ActivityStatusUtil.calculateStatus(activity);
+        if (!ActivityStatusUtil.ENDED.equals(calculatedStatus)) {
+            throw new BusinessException("活动结束后才可以生成 AI 活动复盘");
+        }
         ActivityStats stats = statService.activityStats(activityId);
         List<Feedback> feedbacks = safeList(feedbackMapper.selectList(new LambdaQueryWrapper<Feedback>()
                 .eq(Feedback::getActivityId, activityId)
@@ -66,8 +70,8 @@ public class ActivitySummaryAiService {
         context.setCampus(activity.getCampus());
         context.setStartTime(activity.getStartTime());
         context.setEndTime(activity.getEndTime());
-        context.setStatus(ActivityStatusUtil.calculateStatus(activity));
-        context.setPhaseSummary(!ActivityStatusUtil.ENDED.equals(context.getStatus()));
+        context.setStatus(calculatedStatus);
+        context.setPhaseSummary(false);
         context.setRegistrationCount(safeLong(stats == null ? null : stats.getRegistrationCount()));
         context.setCheckinCount(safeLong(stats == null ? null : stats.getCheckinCount()));
         context.setAbsentCount(safeLong(stats == null ? null : firstNonNull(stats.getAbsentCount(), stats.getAbsenceCount())));
@@ -91,10 +95,9 @@ public class ActivitySummaryAiService {
                 2. 数据不足时必须明确说明“当前数据不足”，不要自行补充事实。
                 3. 输出严格 JSON，不要输出 Markdown，不要输出解释文字。
                 4. 语言适合高校活动负责人向老师或管理员汇报，表达客观、克制、可执行。
-                5. 活动未结束时，需要在 overview 或 dataAnalysis 中说明“当前为阶段性总结”。
-                6. highlights 必须返回 3 条。
-                7. problems 最多返回 3 条；suggestions 最多返回 5 条。
-                8. JSON 字段必须严格为：
+                5. highlights 必须返回 3 条。
+                6. problems 最多返回 3 条；suggestions 最多返回 5 条。
+                7. JSON 字段必须严格为：
                 {
                   "overview": "活动概况",
                   "dataAnalysis": "数据分析",
@@ -113,7 +116,6 @@ public class ActivitySummaryAiService {
                 活动开始时间：%s
                 活动结束时间：%s
                 当前活动状态：%s
-                是否阶段性总结：%s
                 报名人数：%d
                 签到人数：%d
                 未签到人数：%d
@@ -130,7 +132,6 @@ public class ActivitySummaryAiService {
                 formatTime(context.getStartTime()),
                 formatTime(context.getEndTime()),
                 safe(context.getStatus()),
-                Boolean.TRUE.equals(context.getPhaseSummary()) ? "是，当前为阶段性总结" : "否",
                 context.getRegistrationCount(),
                 context.getCheckinCount(),
                 context.getAbsentCount(),
@@ -172,13 +173,12 @@ public class ActivitySummaryAiService {
     }
 
     private String buildInputSummary(ActivitySummaryContext context) {
-        return "活动ID=%d；活动名称=%s；报名=%d；签到=%d；反馈=%d；阶段性总结=%s".formatted(
+        return "活动ID=%d；活动名称=%s；报名=%d；签到=%d；反馈=%d".formatted(
                 context.getActivityId(),
                 safe(context.getActivityName()),
                 context.getRegistrationCount(),
                 context.getCheckinCount(),
-                context.getFeedbackCount(),
-                Boolean.TRUE.equals(context.getPhaseSummary()) ? "是" : "否"
+                context.getFeedbackCount()
         );
     }
 
