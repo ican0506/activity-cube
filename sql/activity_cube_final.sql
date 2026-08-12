@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS `activity` (
   `checkin_start_time` DATETIME NOT NULL COMMENT '签到开始时间',
   `checkin_end_time` DATETIME NOT NULL COMMENT '签到结束时间',
   `max_participants` INT DEFAULT NULL COMMENT '最大报名人数，空表示不限人数',
+  `registered_count` INT NOT NULL DEFAULT 0 COMMENT '当前有效报名人数',
   `allow_cross_campus` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许跨校区报名：1允许，0不允许',
   `reward_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT '是否设置奖励：1是/0否',
   `reward_type` VARCHAR(30) NOT NULL DEFAULT '无' COMMENT '奖励类型：课外学时/积分/证书/实物奖励/无',
@@ -309,3 +310,11 @@ VALUES
 (1, 1, 3, '张三', '2321241389', '信息工程学院', '软件工程2301', '13800001389', '龙子湖校区', '喜欢摄影'),
 (2, 2, 3, '张三', '2321241389', '信息工程学院', '软件工程2301', '13800001389', '龙子湖校区', NULL)
 ON DUPLICATE KEY UPDATE `remark` = VALUES(`remark`);
+
+UPDATE `activity` a
+LEFT JOIN (
+    SELECT `activity_id`, COUNT(*) AS cnt
+    FROM `registration`
+    GROUP BY `activity_id`
+) r ON r.`activity_id` = a.`id`
+SET a.`registered_count` = COALESCE(r.cnt, 0);

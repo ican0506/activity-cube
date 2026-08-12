@@ -31,6 +31,7 @@ public class Activity {
     private LocalDateTime checkinStartTime;
     private LocalDateTime checkinEndTime;
     private Integer maxParticipants;
+    private Integer registeredCount;
     private Boolean allowCrossCampus;
     private Boolean rewardEnabled;
     private String rewardType;

@@ -52,6 +52,7 @@ CREATE TABLE `activity` (
   `register_start_time` DATETIME NOT NULL COMMENT '报名开始时间',
   `register_end_time` DATETIME NOT NULL COMMENT '报名结束时间',
   `max_participants` INT DEFAULT NULL COMMENT '最大报名人数，空表示不限人数',
+  `registered_count` INT NOT NULL DEFAULT 0 COMMENT '当前有效报名人数',
   `allow_cross_campus` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许跨校区报名：1允许，0不允许',
   `status` VARCHAR(30) NOT NULL DEFAULT 'REGISTERING' COMMENT '活动状态：DRAFT草稿/REGISTERING报名中/ONGOING进行中/ENDED已结束/CANCELLED已取消',
   `creator_id` BIGINT NOT NULL COMMENT '创建人用户ID',
@@ -160,6 +161,14 @@ VALUES
 (3, 2, 4, '李四', '2024002', '文法学院', '汉语言2401', '13800000003', '文化路校区', NULL),
 (4, 2, 5, '王五', '2024003', '商学院', '工商管理2401', '13800000004', '许昌校区', NULL),
 (5, 3, 4, '李四', '2024002', '文法学院', '汉语言2401', '13800000003', '文化路校区', '线上参与');
+
+UPDATE `activity` a
+LEFT JOIN (
+    SELECT `activity_id`, COUNT(*) AS cnt
+    FROM `registration`
+    GROUP BY `activity_id`
+) r ON r.`activity_id` = a.`id`
+SET a.`registered_count` = COALESCE(r.cnt, 0);
 
 -- 测试签到
 INSERT INTO `checkin`

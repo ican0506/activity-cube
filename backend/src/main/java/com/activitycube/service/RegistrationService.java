@@ -6,12 +6,14 @@ import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
+import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.RegistrationMapper;
 import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.util.ActivityStatusUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,16 +28,28 @@ public class RegistrationService {
     private final CheckinMapper checkinMapper;
     private final OperationLogService operationLogService;
     private final NoticeService noticeService;
+    private final ActivityMapper activityMapper;
 
     @Transactional
     public Registration register(Long activityId, RegisterRequest request, User user) {
         Activity activity = activityService.requireActivity(activityId);
         validateRegistration(activity, request, user);
+        int reserved = activityMapper.tryReserveRegistrationSlot(activityId);
+        if (reserved == 0) {
+            if (hasRegistration(activityId, user.getId()) || hasRegistrationByStudentNo(activityId, request.getStudentNo())) {
+                throw new BusinessException("你已报名，请勿重复提交");
+            }
+            throw new BusinessException("该活动人数已满");
+        }
         Registration registration = new Registration();
         BeanUtils.copyProperties(request, registration);
         registration.setActivityId(activityId);
         registration.setUserId(user.getId());
-        registrationMapper.insert(registration);
+        try {
+            registrationMapper.insert(registration);
+        } catch (DuplicateKeyException exception) {
+            throw new BusinessException("你已报名，请勿重复提交");
+        }
         noticeService.notifyRegistrationSuccess(activity, registration, user);
         return registration;
     }
@@ -53,6 +67,7 @@ public class RegistrationService {
                 .toList();
     }
 
+    @Transactional
     public void cancelMyRegistration(Long activityId, User user) {
         Activity activity = activityService.requireActivity(activityId);
         Registration registration = registrationMapper.selectOne(new LambdaQueryWrapper<Registration>()
@@ -65,7 +80,12 @@ public class RegistrationService {
         if (reason != null) {
             throw new BusinessException(reason);
         }
-        registrationMapper.deleteById(registration.getId());
+        // 兼容历史数据：可能存在报名明细但 registered_count 已经是 0，释放失败也不能阻止删除真实报名记录。
+        activityMapper.releaseRegistrationSlot(activityId);
+        int deleted = registrationMapper.deleteById(registration.getId());
+        if (deleted == 0) {
+            throw new BusinessException("未找到你的报名记录");
+        }
         operationLogService.record(user, "cancel_registration", "registration", registration.getId(), "取消报名：" + activity.getTitle());
     }
 
@@ -90,19 +110,11 @@ public class RegistrationService {
         if (!ActivityStatusUtil.REGISTERING.equals(calculatedStatus)) {
             throw new BusinessException(registrationClosedMessage(calculatedStatus));
         }
-        if (registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
-                .eq(Registration::getActivityId, activity.getId())
-                .eq(Registration::getUserId, user.getId())) > 0) {
+        if (hasRegistration(activity.getId(), user.getId())) {
             throw new BusinessException("你已报名，请勿重复提交");
         }
-        if (registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
-                .eq(Registration::getActivityId, activity.getId())
-                .eq(Registration::getStudentNo, request.getStudentNo())) > 0) {
+        if (hasRegistrationByStudentNo(activity.getId(), request.getStudentNo())) {
             throw new BusinessException("你已报名，请勿重复提交");
-        }
-        if (activity.getMaxParticipants() != null
-                && activityService.countRegistrations(activity.getId()) >= activity.getMaxParticipants()) {
-            throw new BusinessException("该活动人数已满");
         }
         boolean campusLimited = !Boolean.TRUE.equals(activity.getAllowCrossCampus())
                 && !"全校区".equals(activity.getCampus())
@@ -110,6 +122,18 @@ public class RegistrationService {
         if (campusLimited && !activity.getCampus().equals(user.getCampus())) {
             throw new BusinessException("该活动不允许跨校区报名");
         }
+    }
+
+    private boolean hasRegistration(Long activityId, Long userId) {
+        return registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getActivityId, activityId)
+                .eq(Registration::getUserId, userId)) > 0;
+    }
+
+    private boolean hasRegistrationByStudentNo(Long activityId, String studentNo) {
+        return registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getActivityId, activityId)
+                .eq(Registration::getStudentNo, studentNo)) > 0;
     }
 
     private String registrationClosedMessage(String status) {
