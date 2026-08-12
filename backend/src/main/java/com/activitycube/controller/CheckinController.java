@@ -7,6 +7,7 @@ import com.activitycube.entity.Registration;
 import com.activitycube.service.CheckinService;
 import com.activitycube.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,11 +23,13 @@ public class CheckinController {
     private final CheckinService checkinService;
 
     @PostMapping("/api/activities/{id}/checkin")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<Checkin> checkin(@PathVariable Long id, @RequestParam(required = false) String code) {
         return Result.success(checkinService.checkin(id, AuthUtil.requireUser(), code));
     }
 
     @PostMapping("/api/activities/{id}/checkins/manual")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Checkin> manualCheckin(@PathVariable Long id, @RequestBody ManualCheckinRequest request) {
         Result<Checkin> result = Result.success(checkinService.manualCheckin(id, request, AuthUtil.requireUser()));
         result.setMessage("补签成功");
@@ -34,21 +37,25 @@ public class CheckinController {
     }
 
     @GetMapping("/api/activities/{id}/checkins")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<Checkin>> checkins(@PathVariable Long id) {
         return Result.success(checkinService.listByActivity(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/activities/{id}/absences")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<Registration>> absences(@PathVariable Long id) {
         return Result.success(checkinService.absences(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/activities/{id}/absentees")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<Registration>> absentees(@PathVariable Long id) {
         return Result.success(checkinService.absences(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/my/checkins")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<List<Checkin>> myCheckins() {
         return Result.success(checkinService.myCheckins(AuthUtil.requireUser()));
     }

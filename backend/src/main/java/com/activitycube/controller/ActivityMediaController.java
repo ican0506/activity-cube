@@ -6,6 +6,7 @@ import com.activitycube.entity.ActivityMedia;
 import com.activitycube.service.ActivityMediaService;
 import com.activitycube.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,11 +27,13 @@ public class ActivityMediaController {
     }
 
     @PostMapping("/api/activities/{id}/media")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<ActivityMedia>> save(@PathVariable Long id, @RequestBody ActivityMediaRequest request) {
         return Result.success(activityMediaService.saveAll(id, request, AuthUtil.requireUser()));
     }
 
     @DeleteMapping("/api/activities/media/{mediaId}")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Void> delete(@PathVariable Long mediaId) {
         activityMediaService.delete(mediaId, AuthUtil.requireUser());
         return Result.success();

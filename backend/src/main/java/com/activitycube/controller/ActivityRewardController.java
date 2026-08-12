@@ -7,6 +7,7 @@ import com.activitycube.service.ActivityRewardService;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.StudentRewardView;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,16 +22,19 @@ public class ActivityRewardController {
     private final ActivityRewardService activityRewardService;
 
     @PostMapping("/api/admin/activities/{id}/rewards/issue")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<StudentActivityReward>> issue(@PathVariable Long id, @RequestBody(required = false) RewardIssueRequest request) {
         return Result.success(activityRewardService.issueRewards(id, request, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/admin/activities/{id}/rewards")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<StudentActivityReward>> listByActivity(@PathVariable Long id) {
         return Result.success(activityRewardService.listByActivity(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/student/rewards")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<List<StudentRewardView>> myRewards() {
         return Result.success(activityRewardService.myRewards(AuthUtil.requireUser()));
     }

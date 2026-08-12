@@ -5,6 +5,7 @@ import com.activitycube.entity.Activity;
 import com.activitycube.service.ActivityService;
 import com.activitycube.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
 public class QrCodeController {
     private final ActivityService activityService;
 

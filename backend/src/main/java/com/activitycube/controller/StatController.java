@@ -6,6 +6,7 @@ import com.activitycube.service.StatService;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.ActivityStats;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,14 +21,15 @@ public class StatController {
     private final ActivityService activityService;
 
     @GetMapping("/api/activities/{id}/stats")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<ActivityStats> activityStats(@PathVariable Long id) {
         activityService.requireManageableActivity(id, AuthUtil.requireUser());
         return Result.success(statService.activityStats(id));
     }
 
     @GetMapping("/api/admin/dashboard")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Map<String, Object>> dashboard() {
-        AuthUtil.requireOrganizerOrAdmin(AuthUtil.requireUser());
         Map<String, Object> dashboard = new HashMap<>();
         dashboard.put("activityCount", activityService.list(null, null, null).size());
         dashboard.put("message", "活动魔方 MVP 数据概览");
