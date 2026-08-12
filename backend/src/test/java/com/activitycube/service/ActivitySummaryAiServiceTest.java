@@ -194,6 +194,8 @@ class ActivitySummaryAiServiceTest {
         activity.setTitle("校园志愿服务活动");
         activity.setActivityCategory("志愿服务");
         activity.setCampus("龙子湖校区");
+        activity.setRegisterStartTime(LocalDateTime.of(2026, 7, 1, 9, 0));
+        activity.setRegisterEndTime(LocalDateTime.of(2026, 7, 18, 18, 0));
         activity.setStartTime(LocalDateTime.of(2026, 7, 20, 9, 0));
         activity.setEndTime(LocalDateTime.of(2026, 7, 20, 11, 0));
         activity.setStatus("PUBLISHED");

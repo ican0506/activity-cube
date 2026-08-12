@@ -14,9 +14,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
     private final UserMapper userMapper;
+    private final TokenUtil tokenUtil;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        UserContext.clear();
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())
                 || "/api/auth/login".equals(request.getRequestURI())
                 || "/api/auth/register".equals(request.getRequestURI())) {
@@ -26,7 +28,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
-        User user = TokenUtil.parseUserId(token)
+        User user = tokenUtil.parseUserId(token)
                 .map(userMapper::selectById)
                 .orElse(null);
         if (user == null) {

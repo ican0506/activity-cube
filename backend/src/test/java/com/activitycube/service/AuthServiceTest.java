@@ -1,11 +1,13 @@
 package com.activitycube.service;
 
 import com.activitycube.common.BusinessException;
+import com.activitycube.config.JwtProperties;
 import com.activitycube.dto.LoginRequest;
 import com.activitycube.dto.OrganizerCreateRequest;
 import com.activitycube.dto.RegisterUserRequest;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.UserMapper;
+import com.activitycube.util.TokenUtil;
 import com.activitycube.vo.LoginResponse;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,8 @@ class AuthServiceTest {
     private final UserMapper userMapper = mock(UserMapper.class);
     private final OperationLogService operationLogService = mock(OperationLogService.class);
     private final PasswordService passwordService = new PasswordService();
-    private final AuthService authService = new AuthService(userMapper, operationLogService, passwordService);
+    private final TokenUtil tokenUtil = new TokenUtil(jwtProperties());
+    private final AuthService authService = new AuthService(userMapper, operationLogService, passwordService, tokenUtil);
 
     @Test
     void registersStudentUserAndReturnsToken() {
@@ -40,7 +43,7 @@ class AuthServiceTest {
 
         LoginResponse response = authService.register(request);
 
-        assertThat(response.getToken()).isEqualTo("mock-token-9");
+        assertToken(response.getToken(), 9L, "student");
         assertThat(response.getUser().getUsername()).isEqualTo("2321241389");
         assertThat(response.getUser().getStudentNo()).isEqualTo("2321241389");
         assertThat(response.getUser().getGradeYear()).isEqualTo("2023级");
@@ -135,7 +138,7 @@ class AuthServiceTest {
 
         LoginResponse response = authService.login(loginRequest("T2024001"));
 
-        assertThat(response.getToken()).isEqualTo("mock-token-18");
+        assertToken(response.getToken(), 18L, "organizer");
         assertThat(response.getUser().getPassword()).isNull();
     }
 
@@ -240,5 +243,20 @@ class AuthServiceTest {
         user.setId(1L);
         user.setRole("admin");
         return user;
+    }
+
+    private JwtProperties jwtProperties() {
+        JwtProperties properties = new JwtProperties();
+        properties.setSecret("12345678901234567890123456789012");
+        properties.setExpirationSeconds(7200);
+        properties.setIssuer("activity-cube");
+        return properties;
+    }
+
+    private void assertToken(String token, Long userId, String role) {
+        assertThat(token).isNotBlank();
+        TokenUtil.ParsedToken parsedToken = tokenUtil.parseToken(token).orElseThrow();
+        assertThat(parsedToken.userId()).isEqualTo(userId);
+        assertThat(parsedToken.role()).isEqualTo(role);
     }
 }

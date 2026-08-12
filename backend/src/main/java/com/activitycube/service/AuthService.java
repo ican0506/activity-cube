@@ -24,6 +24,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final OperationLogService operationLogService;
     private final PasswordService passwordService;
+    private final TokenUtil tokenUtil;
 
     public LoginResponse login(LoginRequest request) {
         String identifier = request.resolveIdentifier();
@@ -44,8 +45,9 @@ public class AuthService {
         }
         upgradeLegacyPlaintextPassword(user, request.getPassword());
         normalizeStudentRole(user);
+        String token = tokenUtil.createToken(user.getId(), user.getRole());
         user.setPassword(null);
-        return new LoginResponse(TokenUtil.createToken(user.getId()), user);
+        return new LoginResponse(token, user);
     }
 
     public LoginResponse register(RegisterUserRequest request) {
@@ -73,8 +75,9 @@ public class AuthService {
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(user);
         normalizeStudentRole(user);
+        String token = tokenUtil.createToken(user.getId(), user.getRole());
         user.setPassword(null);
-        return new LoginResponse(TokenUtil.createToken(user.getId()), user);
+        return new LoginResponse(token, user);
     }
 
     @Transactional
