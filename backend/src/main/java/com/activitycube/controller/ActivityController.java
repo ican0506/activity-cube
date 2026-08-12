@@ -11,6 +11,7 @@ import com.activitycube.vo.ActivityDetail;
 import com.activitycube.vo.ActivityRecommendationVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class ActivityController {
     }
 
     @GetMapping("/recommendations")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<List<ActivityRecommendationVO>> recommendations() {
         return Result.success(activityRecommendationService.recommendForStudent(AuthUtil.requireUser()));
     }
@@ -48,41 +50,49 @@ public class ActivityController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Activity> create(@Valid @RequestBody ActivityRequest request) {
         return Result.success(activityService.create(request, AuthUtil.requireUser()));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Activity> update(@PathVariable Long id, @Valid @RequestBody ActivityRequest request) {
         return Result.success(activityService.update(id, request, AuthUtil.requireUser()));
     }
 
     @PostMapping("/{id}/submit-review")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Activity> submitReview(@PathVariable Long id) {
         return Result.success(activityService.submitReview(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/admin/reviews")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<List<Activity>> pendingReviews() {
         return Result.success(activityService.pendingReviews(AuthUtil.requireUser()));
     }
 
     @PostMapping("/admin/{id}/review/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Activity> approveReview(@PathVariable Long id) {
         return Result.success(activityService.approveReview(id, AuthUtil.requireUser()));
     }
 
     @PostMapping("/admin/{id}/review/reject")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Activity> rejectReview(@PathVariable Long id, @Valid @RequestBody RejectActivityRequest request) {
         return Result.success(activityService.rejectReview(id, request, AuthUtil.requireUser()));
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Activity> cancel(@PathVariable Long id) {
         return Result.success(activityService.cancel(id, AuthUtil.requireUser()));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<Void> delete(@PathVariable Long id) {
         activityService.delete(id, AuthUtil.requireUser());
         return Result.success();

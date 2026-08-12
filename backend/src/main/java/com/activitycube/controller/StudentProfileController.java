@@ -10,6 +10,7 @@ import com.activitycube.vo.StudentProfileSummary;
 import com.activitycube.vo.StudentTodoItem;
 import com.activitycube.vo.FileUploadResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -23,6 +24,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('STUDENT')")
 public class StudentProfileController {
     private final StudentProfileService studentProfileService;
 

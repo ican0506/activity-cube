@@ -9,6 +9,7 @@ import com.activitycube.service.ActivitySummaryAiService;
 import com.activitycube.util.AuthUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
 public class AiController {
     private final ActivityAiService activityAiService;
     private final ActivitySummaryAiService activitySummaryAiService;

@@ -12,6 +12,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -163,6 +164,51 @@ class SecurityConfigTest {
     }
 
     @Test
+    void methodSecurityRejectsStudentForAdminOnlyEndpoint() throws Exception {
+        when(userMapper.selectById(9L)).thenReturn(user(9L, "student", 1));
+
+        mockMvc.perform(get("/api/method-security/admin-only").header(HttpHeaders.AUTHORIZATION, bearer(9L, "student")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("你没有权限访问该功能"));
+    }
+
+    @Test
+    void methodSecurityAllowsAdminForAdminOnlyEndpoint() throws Exception {
+        when(userMapper.selectById(9L)).thenReturn(user(9L, "admin", 1));
+
+        mockMvc.perform(get("/api/method-security/admin-only").header(HttpHeaders.AUTHORIZATION, bearer(9L, "admin")))
+                .andExpect(status().isOk())
+                .andExpect(content().string("admin-method"));
+    }
+
+    @Test
+    void methodSecurityRejectsStudentForOrganizerEndpoint() throws Exception {
+        when(userMapper.selectById(9L)).thenReturn(user(9L, "student", 1));
+
+        mockMvc.perform(get("/api/method-security/manager").header(HttpHeaders.AUTHORIZATION, bearer(9L, "student")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("你没有权限访问该功能"));
+    }
+
+    @Test
+    void methodSecurityAllowsOrganizerForOrganizerEndpoint() throws Exception {
+        when(userMapper.selectById(9L)).thenReturn(user(9L, "organizer", 1));
+
+        mockMvc.perform(get("/api/method-security/manager").header(HttpHeaders.AUTHORIZATION, bearer(9L, "organizer")))
+                .andExpect(status().isOk())
+                .andExpect(content().string("manager-method"));
+    }
+
+    @Test
+    void methodSecurityAllowsAdminForOrganizerEndpoint() throws Exception {
+        when(userMapper.selectById(9L)).thenReturn(user(9L, "admin", 1));
+
+        mockMvc.perform(get("/api/method-security/manager").header(HttpHeaders.AUTHORIZATION, bearer(9L, "admin")))
+                .andExpect(status().isOk())
+                .andExpect(content().string("manager-method"));
+    }
+
+    @Test
     void optionsRequestsAreNotBlocked() throws Exception {
         mockMvc.perform(options("/api/activities")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.GET.name()))
@@ -216,12 +262,14 @@ class SecurityConfigTest {
         }
 
         @GetMapping("/api/admin/users")
+        @PreAuthorize("hasRole('ADMIN')")
         String adminUsers(Authentication authentication) {
             User user = (User) authentication.getPrincipal();
             return user.getRole();
         }
 
         @GetMapping("/api/admin/notices")
+        @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
         String adminNotices(Authentication authentication) {
             User user = (User) authentication.getPrincipal();
             return user.getRole();
@@ -230,6 +278,18 @@ class SecurityConfigTest {
         @GetMapping("/uploads/demo.png")
         String upload() {
             return "upload";
+        }
+
+        @PreAuthorize("hasRole('ADMIN')")
+        @GetMapping("/api/method-security/admin-only")
+        String adminOnlyMethod() {
+            return "admin-method";
+        }
+
+        @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
+        @GetMapping("/api/method-security/manager")
+        String managerMethod() {
+            return "manager-method";
         }
     }
 }

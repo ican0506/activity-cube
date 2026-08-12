@@ -9,6 +9,7 @@ import com.activitycube.service.ToolService;
 import com.activitycube.util.AuthUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +19,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
 public class ToolController {
     private final ActivityService activityService;
     private final ToolService toolService;

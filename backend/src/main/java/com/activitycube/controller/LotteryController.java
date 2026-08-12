@@ -8,6 +8,7 @@ import com.activitycube.service.LotteryService;
 import com.activitycube.util.AuthUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/activities/{id}/lottery")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
 public class LotteryController {
     private final ActivityService activityService;
     private final LotteryService lotteryService;

@@ -10,6 +10,7 @@ import com.activitycube.vo.FeedbackView;
 import com.activitycube.vo.ManagerFeedbackView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,21 +26,25 @@ public class FeedbackController {
     private final FeedbackService feedbackService;
 
     @PostMapping("/api/activities/{id}/feedback")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<Feedback> submit(@PathVariable Long id, @Valid @RequestBody FeedbackRequest request) {
         return Result.success(feedbackService.submit(id, request, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/activities/{id}/feedbacks")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<FeedbackView>> feedbacks(@PathVariable Long id) {
         return Result.success(feedbackService.listByActivity(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/activities/{id}/feedback-stats")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<FeedbackStats> stats(@PathVariable Long id) {
         return Result.success(feedbackService.stats(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/admin/feedbacks")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<ManagerFeedbackView>> managerFeedbacks(@RequestParam(required = false) String type) {
         return Result.success(feedbackService.listManagerFeedbacks(AuthUtil.requireUser(), type));
     }

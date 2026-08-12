@@ -7,6 +7,7 @@ import com.activitycube.service.RegistrationService;
 import com.activitycube.util.AuthUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,21 +24,25 @@ public class RegistrationController {
     private final RegistrationService registrationService;
 
     @PostMapping("/api/activities/{id}/register")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<Registration> register(@PathVariable Long id, @Valid @RequestBody RegisterRequest request) {
         return Result.success(registrationService.register(id, request, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/activities/{id}/registrations")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public Result<List<Registration>> registrations(@PathVariable Long id) {
         return Result.success(registrationService.listByActivity(id, AuthUtil.requireUser()));
     }
 
     @GetMapping("/api/my/registrations")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<List<Registration>> myRegistrations() {
         return Result.success(registrationService.myRegistrations(AuthUtil.requireUser()));
     }
 
     @DeleteMapping("/api/activities/{id}/registrations/me")
+    @PreAuthorize("hasRole('STUDENT')")
     public Result<Void> cancelMyRegistration(@PathVariable Long id) {
         registrationService.cancelMyRegistration(id, AuthUtil.requireUser());
         return Result.success();

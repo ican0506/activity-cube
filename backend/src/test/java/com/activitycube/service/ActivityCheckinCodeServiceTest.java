@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -149,6 +150,31 @@ class ActivityCheckinCodeServiceTest {
 
         assertThat(updated.getTitle()).isEqualTo("修改后的活动名称");
         assertThat(updated.getReviewStatus()).isEqualTo("PENDING_REVIEW");
+        verify(activityMapper).updateById(activity);
+    }
+
+    @Test
+    void organizerCannotUpdateActivityCreatedByAnotherOrganizer() {
+        Activity activity = publishedActivity(15L);
+        activity.setCreatorId(99L);
+        when(activityMapper.selectById(15L)).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.update(15L, requestFrom(activity), manager()))
+                .isInstanceOf(com.activitycube.common.BusinessException.class)
+                .hasMessage("只能管理自己创建的活动");
+    }
+
+    @Test
+    void adminCanUpdateActivityCreatedByOrganizer() {
+        Activity activity = publishedActivity(16L);
+        activity.setCreatorId(99L);
+        when(activityMapper.selectById(16L)).thenReturn(activity);
+        ActivityRequest request = requestFrom(activity);
+        request.setLocation("管理员修正地点");
+
+        Activity updated = activityService.update(16L, request, admin());
+
+        assertThat(updated.getLocation()).isEqualTo("管理员修正地点");
         verify(activityMapper).updateById(activity);
     }
 
