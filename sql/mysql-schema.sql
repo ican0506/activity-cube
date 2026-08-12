@@ -45,16 +45,29 @@ CREATE TABLE `activity` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '活动ID',
   `title` VARCHAR(100) NOT NULL COMMENT '活动名称',
   `description` TEXT NOT NULL COMMENT '活动介绍',
+  `cover_url` VARCHAR(500) DEFAULT NULL COMMENT '活动封面图URL',
+  `activity_mode` VARCHAR(20) NOT NULL DEFAULT 'offline' COMMENT '活动形式：online线上活动/offline线下活动/hybrid混合活动',
+  `checkin_mode` VARCHAR(20) NOT NULL DEFAULT 'qr' COMMENT '签到方式：online线上签到/qr现场扫码签到/both两种都支持',
+  `activity_category` VARCHAR(50) NOT NULL DEFAULT '其他' COMMENT '活动类型',
+  `checkin_code` VARCHAR(64) DEFAULT NULL COMMENT '签到码',
   `campus` VARCHAR(50) NOT NULL COMMENT '活动校区：全校区/龙子湖校区/文化路校区/许昌校区/线上',
   `location` VARCHAR(200) NOT NULL COMMENT '活动地点',
   `start_time` DATETIME NOT NULL COMMENT '活动开始时间',
   `end_time` DATETIME NOT NULL COMMENT '活动结束时间',
   `register_start_time` DATETIME NOT NULL COMMENT '报名开始时间',
   `register_end_time` DATETIME NOT NULL COMMENT '报名结束时间',
+  `checkin_start_time` DATETIME NOT NULL COMMENT '签到开始时间',
+  `checkin_end_time` DATETIME NOT NULL COMMENT '签到结束时间',
   `max_participants` INT DEFAULT NULL COMMENT '最大报名人数，空表示不限人数',
   `registered_count` INT NOT NULL DEFAULT 0 COMMENT '当前有效报名人数',
   `allow_cross_campus` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许跨校区报名：1允许，0不允许',
-  `status` VARCHAR(30) NOT NULL DEFAULT 'REGISTERING' COMMENT '活动状态：DRAFT草稿/REGISTERING报名中/ONGOING进行中/ENDED已结束/CANCELLED已取消',
+  `reward_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT '是否设置奖励',
+  `reward_type` VARCHAR(30) NOT NULL DEFAULT '无' COMMENT '奖励类型',
+  `reward_hours` DECIMAL(5,1) NOT NULL DEFAULT 0.0 COMMENT '课外学时数量',
+  `reward_points` INT NOT NULL DEFAULT 0 COMMENT '积分数量',
+  `reward_description` VARCHAR(500) DEFAULT NULL COMMENT '奖励说明',
+  `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT' COMMENT '活动工作流状态：DRAFT草稿/PENDING_REVIEW待审核/REJECTED已驳回/PUBLISHED已发布/CANCELLED已取消',
+  `reject_reason` VARCHAR(500) DEFAULT NULL COMMENT '驳回原因',
   `creator_id` BIGINT NOT NULL COMMENT '创建人用户ID',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -62,12 +75,16 @@ CREATE TABLE `activity` (
   KEY `idx_activity_creator` (`creator_id`),
   KEY `idx_activity_campus_status` (`campus`, `status`),
   KEY `idx_activity_start_time` (`start_time`),
+  KEY `idx_activity_checkin_code` (`checkin_code`),
   CONSTRAINT `fk_activity_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `chk_activity_mode` CHECK (`activity_mode` IN ('online', 'offline', 'hybrid')),
+  CONSTRAINT `chk_activity_checkin_mode` CHECK (`checkin_mode` IN ('online', 'qr', 'both')),
   CONSTRAINT `chk_activity_campus` CHECK (`campus` IN ('全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上')),
-  CONSTRAINT `chk_activity_status` CHECK (`status` IN ('DRAFT', 'REGISTERING', 'ONGOING', 'ENDED', 'CANCELLED')),
+  CONSTRAINT `chk_activity_workflow_status` CHECK (`status` IN ('DRAFT', 'PENDING_REVIEW', 'REJECTED', 'PUBLISHED', 'CANCELLED')),
   CONSTRAINT `chk_activity_max_participants` CHECK (`max_participants` IS NULL OR `max_participants` > 0),
   CONSTRAINT `chk_activity_time` CHECK (`end_time` > `start_time`),
-  CONSTRAINT `chk_activity_register_time` CHECK (`register_end_time` > `register_start_time`)
+  CONSTRAINT `chk_activity_register_time` CHECK (`register_end_time` > `register_start_time`),
+  CONSTRAINT `chk_activity_checkin_time` CHECK (`checkin_end_time` > `checkin_start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动表';
 
 -- 报名表：学生报名活动记录
@@ -146,11 +163,11 @@ VALUES
 
 -- 测试活动
 INSERT INTO `activity`
-(`id`, `title`, `description`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `max_participants`, `allow_cross_campus`, `status`, `creator_id`)
+(`id`, `title`, `description`, `activity_mode`, `checkin_mode`, `activity_category`, `checkin_code`, `campus`, `location`, `start_time`, `end_time`, `register_start_time`, `register_end_time`, `checkin_start_time`, `checkin_end_time`, `max_participants`, `allow_cross_campus`, `reward_enabled`, `reward_type`, `reward_hours`, `reward_points`, `reward_description`, `status`, `creator_id`)
 VALUES
-(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-20 14:00:00', '2026-07-20 16:00:00', '2026-07-15 08:00:00', '2026-07-20 12:00:00', 120, 0, 'REGISTERING', 2),
-(2, '全校区志愿服务动员会', '面向三个校区学生的志愿服务说明会，支持跨校区报名。', '全校区', '线上直播+各校区分会场', '2026-07-22 19:00:00', '2026-07-22 20:30:00', '2026-07-15 08:00:00', '2026-07-22 18:00:00', 300, 1, 'REGISTERING', 2),
-(3, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', 500, 1, 'REGISTERING', 2);
+(1, '龙子湖校区校园摄影分享会', '面向龙子湖校区学生的摄影经验分享、作品展示和现场互动活动。', 'offline', 'qr', '文体活动', 'demo-checkin-code-1', '龙子湖校区', '龙子湖校区大学生活动中心201', '2026-07-20 14:00:00', '2026-07-20 16:00:00', '2026-07-15 08:00:00', '2026-07-20 12:00:00', '2026-07-20 13:30:00', '2026-07-20 16:30:00', 120, 0, 1, '课外学时', 1.0, 0, '完成签到后获得课外学时。', 'PUBLISHED', 2),
+(2, '全校区志愿服务动员会', '面向三个校区学生的志愿服务说明会，支持跨校区报名。', 'hybrid', 'online', '志愿服务', 'demo-checkin-code-2', '全校区', '线上直播+各校区分会场', '2026-07-22 19:00:00', '2026-07-22 20:30:00', '2026-07-15 08:00:00', '2026-07-22 18:00:00', '2026-07-22 18:30:00', '2026-07-22 21:00:00', 300, 1, 1, '课外学时', 2.0, 0, '完成签到后获得志愿服务课外学时。', 'PUBLISHED', 2),
+(3, '线上AI工具体验课', '介绍常用AI学习与实践工具，活动全程线上进行。', 'online', 'online', '讲座培训', NULL, '线上', '腾讯会议', '2026-07-25 19:00:00', '2026-07-25 20:30:00', '2026-07-15 08:00:00', '2026-07-25 18:00:00', '2026-07-25 18:50:00', '2026-07-25 20:45:00', 500, 1, 0, '无', 0.0, 0, NULL, 'PUBLISHED', 2);
 
 -- 测试报名
 INSERT INTO `registration`
