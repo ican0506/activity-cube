@@ -4,6 +4,10 @@ export function listActivities(params) {
   return request.get('/activities', { params })
 }
 
+export function pageActivities(params) {
+  return request.get('/activities/page', { params })
+}
+
 export function getActivity(id) {
   return request.get(`/activities/${id}`)
 }

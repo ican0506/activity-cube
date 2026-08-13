@@ -27,6 +27,7 @@ class ActivityControllerTest {
         request.setPageNum(2);
         request.setPageSize(20);
         request.setKeyword("讲座");
+        request.setActivityMode("online");
         PageResult<Activity> pageResult = new PageResult<>(List.of(new Activity()), 21, 2, 20);
         when(activityService.page(request)).thenReturn(pageResult);
 

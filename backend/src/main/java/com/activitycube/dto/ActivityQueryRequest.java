@@ -9,4 +9,5 @@ public class ActivityQueryRequest {
     private String keyword;
     private String campus;
     private String status;
+    private String activityMode;
 }

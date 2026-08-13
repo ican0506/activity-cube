@@ -26,18 +26,14 @@
           <h2>快速筛选</h2>
         </div>
         <div class="hall-filter-actions">
-          <el-button type="primary" :icon="Search" :loading="loading" @click="load">筛选</el-button>
+          <el-button type="primary" :icon="Search" :loading="loading" @click="searchActivities">筛选</el-button>
         </div>
       </div>
 
       <div class="hall-search-row">
-        <el-input v-model="filters.keyword" clearable placeholder="搜索活动名称、地点或校区" @keyup.enter="load" />
-        <el-select v-model="filters.status" placeholder="活动状态">
-          <el-option v-for="item in studentActivityStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-        <el-select v-model="filters.category" placeholder="活动分类">
-          <el-option label="全部分类" value="ALL" />
-          <el-option v-for="item in activityCategories" :key="item" :label="item" :value="item" />
+        <el-input v-model="filters.keyword" clearable placeholder="搜索活动名称" @clear="searchActivities" @keyup.enter="searchActivities" />
+        <el-select v-model="filters.status" placeholder="活动状态" @change="searchActivities">
+          <el-option v-for="item in hallStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </div>
 
@@ -111,7 +107,7 @@
         <span class="ds-eyebrow">Activities</span>
         <h2>活动列表</h2>
       </div>
-      <span>{{ visibleActivities.length }} 个活动 · 按报名中、即将开始、进行中、已结束排序</span>
+      <span>{{ pagination.total }} 个活动 · 按发布时间排序</span>
     </div>
 
     <div v-loading="loading" class="grid activity-grid hall-activity-grid">
@@ -122,6 +118,18 @@
       class="panel empty-wrap hall-empty"
       description="当前筛选条件下暂无活动，换个范围或状态试试。"
     />
+    <div v-if="pagination.total > 0" class="hall-pagination ds-card">
+      <el-pagination
+        v-model:current-page="pagination.pageNum"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next"
+        background
+        @current-change="handlePageChange"
+        @size-change="handlePageSizeChange"
+      />
+    </div>
   </section>
 </template>
 
@@ -130,41 +138,25 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { Calendar, Location, MagicStick, Refresh, School, Search, Tickets } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ActivityCard from '../components/ActivityCard.vue'
-import { listActivities } from '../api/activity'
+import { pageActivities } from '../api/activity'
 import { listActivityRecommendations } from '../api/recommendation'
 import {
-  activityCategories,
   activityModeText,
-  activityScopeMatches,
-  isStudentVisibleActivity,
-  studentActivityStatus,
   studentActivityStatusOptions
 } from '../utils/options'
 
-const filters = reactive({ keyword: '', scope: '全部', status: 'ALL', category: 'ALL' })
+const filters = reactive({ keyword: '', scope: '全部', status: 'ALL' })
+const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
 const activities = ref([])
 const recommendations = ref([])
 const loading = ref(false)
 const recommending = ref(false)
 const hasRecommended = ref(false)
 const quickCampuses = ['全部', '龙子湖校区', '文化路校区', '许昌校区', '全校区', '线上活动']
+const hallStatusOptions = studentActivityStatusOptions.filter((item) => item.value !== 'CHECKIN')
+let latestRequestId = 0
 
-const visibleActivities = computed(() => {
-  const keyword = filters.keyword.trim().toLowerCase()
-  return activities.value
-    .filter(isStudentVisibleActivity)
-    .filter((item) => activityScopeMatches(item, filters.scope))
-    .filter((item) => filters.status === 'ALL' || studentActivityStatus(item) === filters.status)
-    .filter((item) => filters.category === 'ALL' || item.activityCategory === filters.category)
-    .filter((item) => {
-      if (!keyword) return true
-      return [item.title, item.location, item.campus, item.activityCategory]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(keyword))
-    })
-    .slice()
-    .sort(activitySort)
-})
+const visibleActivities = computed(() => activities.value)
 
 const hallMetrics = computed(() => [
   { label: '正在报名', value: countByStatus('REGISTERING') },
@@ -179,25 +171,7 @@ function countByStatus(status) {
 
 function setCampus(scope) {
   filters.scope = scope
-}
-
-function activitySort(a, b) {
-  return statusWeight(a) - statusWeight(b)
-    || dateWeight(a.startTime) - dateWeight(b.startTime)
-}
-
-function statusWeight(activity) {
-  if (activity.status === 'REGISTERING') return 1
-  if (activity.status === 'WAITING_START' || activity.status === 'NOT_STARTED') return 2
-  if (activity.canCheckin && !activity.checkedIn) return 3
-  if (activity.status === 'ONGOING') return 4
-  if (activity.status === 'ENDED') return 5
-  return 9
-}
-
-function dateWeight(value) {
-  const date = value ? new Date(value) : null
-  return date && !Number.isNaN(date.getTime()) ? date.getTime() : Number.MAX_SAFE_INTEGER
+  searchActivities()
 }
 
 function formatDateTime(value) {
@@ -220,11 +194,70 @@ async function loadRecommendations() {
 }
 
 async function load() {
+  return loadActivities()
+}
+
+function searchActivities() {
+  pagination.pageNum = 1
+  loadActivities()
+}
+
+function handlePageChange(page) {
+  loadActivities({ pageNum: page })
+}
+
+function handlePageSizeChange(size) {
+  pagination.pageNum = 1
+  pagination.pageSize = size
+  loadActivities()
+}
+
+function buildPageParams() {
+  const params = {
+    pageNum: pagination.pageNum,
+    pageSize: pagination.pageSize
+  }
+  const keyword = filters.keyword.trim()
+  if (keyword) {
+    params.keyword = keyword
+  }
+  if (filters.status && filters.status !== 'ALL') {
+    params.status = filters.status
+  }
+  if (filters.scope === '线上活动') {
+    params.activityMode = 'online'
+  } else if (filters.scope && filters.scope !== '全部') {
+    params.campus = filters.scope
+  }
+  return params
+}
+
+async function loadActivities(options = {}) {
+  const requestedPage = options.pageNum || pagination.pageNum
+  const requestedSize = options.pageSize || pagination.pageSize
+  pagination.pageNum = requestedPage
+  pagination.pageSize = requestedSize
+  const requestId = ++latestRequestId
   loading.value = true
   try {
-    activities.value = await listActivities()
+    const data = await pageActivities(buildPageParams())
+    if (requestId !== latestRequestId) {
+      return
+    }
+    activities.value = data?.records ?? []
+    pagination.total = Number(data?.total ?? 0)
+    pagination.pageNum = Number(data?.page ?? requestedPage)
+    pagination.pageSize = Number(data?.size ?? requestedSize)
+  } catch (error) {
+    if (requestId === latestRequestId) {
+      activities.value = []
+      pagination.total = 0
+      ElMessage.error(error?.message || '活动加载失败，请稍后重试')
+    }
   } finally {
-    loading.value = false
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
   }
 }
 
