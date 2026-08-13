@@ -2,6 +2,7 @@ package com.activitycube.controller;
 
 import com.activitycube.common.Result;
 import com.activitycube.dto.ActivityRequest;
+import com.activitycube.dto.ActivityQueryRequest;
 import com.activitycube.dto.RejectActivityRequest;
 import com.activitycube.entity.Activity;
 import com.activitycube.service.ActivityRecommendationService;
@@ -9,6 +10,7 @@ import com.activitycube.service.ActivityService;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.vo.ActivityDetail;
 import com.activitycube.vo.ActivityRecommendationVO;
+import com.activitycube.vo.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +38,11 @@ public class ActivityController {
                                        @RequestParam(required = false) String campus,
                                        @RequestParam(required = false) String status) {
         return Result.success(activityService.list(keyword, campus, status));
+    }
+
+    @GetMapping("/page")
+    public Result<PageResult<Activity>> page(ActivityQueryRequest request) {
+        return Result.success(activityService.page(request));
     }
 
     @GetMapping("/recommendations")

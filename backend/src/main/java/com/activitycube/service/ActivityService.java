@@ -1,6 +1,7 @@
 package com.activitycube.service;
 
 import com.activitycube.common.BusinessException;
+import com.activitycube.dto.ActivityQueryRequest;
 import com.activitycube.dto.ActivityRequest;
 import com.activitycube.dto.RejectActivityRequest;
 import com.activitycube.entity.Activity;
@@ -16,7 +17,9 @@ import com.activitycube.util.AuthUtil;
 import com.activitycube.util.UserContext;
 import com.activitycube.vo.ActivityCountVO;
 import com.activitycube.vo.ActivityDetail;
+import com.activitycube.vo.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -50,18 +53,9 @@ public class ActivityService {
     private final NoticeService noticeService;
 
     public List<Activity> list(String keyword, String campus, String status) {
-        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
-                .orderByDesc(Activity::getCreatedAt);
-        if (!isManager(UserContext.get().orElse(null))) {
-            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED);
-        }
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(Activity::getTitle, keyword);
-        }
-        if (StringUtils.hasText(campus) && !"全部".equals(campus)) {
-            wrapper.eq(Activity::getCampus, campus);
-        }
         User currentUser = UserContext.get().orElse(null);
+        LambdaQueryWrapper<Activity> wrapper = baseListWrapper(keyword, campus, currentUser)
+                .orderByDesc(Activity::getCreatedAt);
         List<Activity> activities = activityMapper.selectList(wrapper).stream()
                 .peek(this::applyResponseDefaults)
                 .filter(activity -> !StringUtils.hasText(status)
@@ -71,9 +65,28 @@ public class ActivityService {
         if (activities.isEmpty()) {
             return List.of();
         }
-        ActivityListContext context = prepareActivityListContext(activities, currentUser);
-        activities.forEach(activity -> applyStudentResponseFromContext(activity, context));
+        enrichActivities(activities, currentUser);
         return activities;
+    }
+
+    public PageResult<Activity> page(ActivityQueryRequest request) {
+        ActivityQueryRequest query = request == null ? new ActivityQueryRequest() : request;
+        long pageNum = normalizePageNum(query.getPageNum());
+        long pageSize = normalizePageSize(query.getPageSize());
+        LocalDateTime now = LocalDateTime.now();
+        User currentUser = UserContext.get().orElse(null);
+        LambdaQueryWrapper<Activity> wrapper = baseListWrapper(query.getKeyword(), query.getCampus(), currentUser);
+        applyStatusCondition(wrapper, query.getStatus(), now);
+        wrapper.orderByDesc(Activity::getCreatedAt).orderByDesc(Activity::getId);
+
+        Page<Activity> result = activityMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        List<Activity> records = result.getRecords();
+        if (records == null || records.isEmpty()) {
+            return new PageResult<>(List.of(), result.getTotal(), pageNum, pageSize);
+        }
+        records.forEach(activity -> applyResponseDefaults(activity, now));
+        enrichActivities(records, currentUser);
+        return new PageResult<>(records, result.getTotal(), pageNum, pageSize);
     }
 
     public ActivityDetail detail(Long id) {
@@ -362,6 +375,12 @@ public class ActivityService {
         applyActivityDefaults(activity);
     }
 
+    private void applyResponseDefaults(Activity activity, LocalDateTime now) {
+        activity.setReviewStatus(activity.getStatus());
+        activity.setStatus(ActivityStatusUtil.calculateStatus(activity, now));
+        applyActivityDefaults(activity);
+    }
+
     private void applyStudentResponse(Activity activity, User user) {
         applyResponseDefaults(activity);
         Long registrationCount = countRegistrations(activity.getId());
@@ -415,6 +434,14 @@ public class ActivityService {
         return new ActivityListContext(registrationCountMap, checkinCountMap, registeredActivityIds, checkedInActivityIds, feedbackActivityIds, true);
     }
 
+    private void enrichActivities(List<Activity> activities, User currentUser) {
+        if (activities == null || activities.isEmpty()) {
+            return;
+        }
+        ActivityListContext context = prepareActivityListContext(activities, currentUser);
+        activities.forEach(activity -> applyStudentResponseFromContext(activity, context));
+    }
+
     private void applyStudentResponseFromContext(Activity activity, ActivityListContext context) {
         Long activityId = activity.getId();
         Long registrationCount = context.registrationCountMap().getOrDefault(activityId, 0L);
@@ -466,6 +493,74 @@ public class ActivityService {
 
     private boolean isStudent(User user) {
         return user != null && user.getId() != null && ("student".equals(user.getRole()) || "user".equals(user.getRole()));
+    }
+
+    private LambdaQueryWrapper<Activity> baseListWrapper(String keyword, String campus, User currentUser) {
+        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
+        if (!isManager(currentUser)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.like(Activity::getTitle, keyword);
+        }
+        if (StringUtils.hasText(campus) && !"全部".equals(campus) && !"ALL".equalsIgnoreCase(campus)) {
+            wrapper.eq(Activity::getCampus, campus);
+        }
+        return wrapper;
+    }
+
+    private void applyStatusCondition(LambdaQueryWrapper<Activity> wrapper, String status, LocalDateTime now) {
+        if (!StringUtils.hasText(status) || "全部".equals(status) || "ALL".equalsIgnoreCase(status)) {
+            return;
+        }
+        if (ActivityStatusUtil.DRAFT.equals(status)
+                || ActivityStatusUtil.PENDING_REVIEW.equals(status)
+                || ActivityStatusUtil.REJECTED.equals(status)
+                || ActivityStatusUtil.CANCELLED.equals(status)
+                || ActivityStatusUtil.PUBLISHED.equals(status)) {
+            wrapper.eq(Activity::getStatus, status);
+            return;
+        }
+        if (ActivityStatusUtil.NOT_STARTED.equals(status)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED)
+                    .gt(Activity::getRegisterStartTime, now);
+            return;
+        }
+        if (ActivityStatusUtil.REGISTERING.equals(status)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED)
+                    .le(Activity::getRegisterStartTime, now)
+                    .ge(Activity::getRegisterEndTime, now);
+            return;
+        }
+        if (ActivityStatusUtil.WAITING_START.equals(status)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED)
+                    .lt(Activity::getRegisterEndTime, now)
+                    .gt(Activity::getStartTime, now);
+            return;
+        }
+        if (ActivityStatusUtil.ONGOING.equals(status)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED)
+                    .le(Activity::getStartTime, now)
+                    .ge(Activity::getEndTime, now);
+            return;
+        }
+        if (ActivityStatusUtil.ENDED.equals(status)) {
+            wrapper.eq(Activity::getStatus, ActivityStatusUtil.PUBLISHED)
+                    .lt(Activity::getEndTime, now);
+            return;
+        }
+        wrapper.eq(Activity::getStatus, status);
+    }
+
+    private long normalizePageNum(Integer pageNum) {
+        return pageNum == null || pageNum <= 0 ? 1 : pageNum;
+    }
+
+    private long normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize <= 0) {
+            return 10;
+        }
+        return Math.min(pageSize, 50);
     }
 
     private boolean isWithinCheckinWindow(Activity activity) {

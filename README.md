@@ -577,3 +577,154 @@ BUILD SUCCESS
 ```
 
 说明：集成测试会创建独立测试库，例如 `activity_cube_concurrency_it` 和 `activity_cube_batch_mapper_it`，不会直接修改正式 `activity_cube` 数据库。
+
+### 2026-08-13：活动列表后端分页与查询条件下推
+
+本轮只新增后端分页能力，不修改前端页面、不修改数据库结构、不修改 Flyway、不改报名并发算法和 AI 模块。
+
+#### 1. 新增分页接口
+
+新增接口：
+
+```http
+GET /api/activities/page
+```
+
+查询参数：
+
+- `pageNum`：页码，默认 `1`；
+- `pageSize`：每页数量，默认 `10`，最大 `50`；
+- `keyword`：活动标题关键字；
+- `campus`：活动校区；
+- `status`：活动状态。
+
+原有接口继续保留：
+
+```http
+GET /api/activities
+```
+
+前端当前仍可继续使用旧接口，后续前端分页迁移再单独进行。
+
+#### 2. 分页参数处理
+
+后端新增 `ActivityQueryRequest` 统一接收分页查询参数。
+
+分页参数归一化规则：
+
+- `pageNum <= 0` 或为空时，使用 `1`；
+- `pageSize <= 0` 或为空时，使用 `10`；
+- `pageSize > 50` 时，限制为 `50`。
+
+分页返回复用项目已有结构：
+
+```text
+PageResult<Activity>
+```
+
+字段仍为：
+
+- `records`
+- `total`
+- `page`
+- `size`
+
+没有新增第二套分页 VO。
+
+#### 3. 查询条件下推
+
+分页接口在数据库分页前完成查询条件过滤：
+
+- `keyword`：继续保持当前语义，只按活动标题 `title LIKE` 搜索；
+- `campus`：直接下推为 `campus = ?`；
+- `status`：区分工作流状态和动态运行状态。
+
+工作流状态直接使用数据库字段：
+
+```text
+DRAFT
+PENDING_REVIEW
+REJECTED
+CANCELLED
+PUBLISHED
+```
+
+动态运行状态会转换成 `PUBLISHED + 时间条件`：
+
+```text
+NOT_STARTED   -> PUBLISHED 且 now < register_start_time
+REGISTERING   -> PUBLISHED 且 register_start_time <= now <= register_end_time
+WAITING_START -> PUBLISHED 且 register_end_time < now < start_time
+ONGOING       -> PUBLISHED 且 start_time <= now <= end_time
+ENDED         -> PUBLISHED 且 now > end_time
+```
+
+这样可以保证：
+
+- `records` 是过滤后的当前页数据；
+- `total` 是同一过滤条件下的真实总数；
+- 不会出现数据库先分页、Java 再过滤导致每页数量和总数错误的问题。
+
+#### 4. N+1 优化复用
+
+`ActivityService.list()` 和新增的 `ActivityService.page()` 共用同一套批量 enrichment 逻辑：
+
+- 批量查询当前页活动报名数；
+- 批量查询当前页活动签到数；
+- 学生端批量查询当前页报名状态；
+- 学生端批量查询当前页签到状态；
+- 学生端批量查询当前页反馈状态。
+
+分页后不会重新出现逐活动查询。
+
+分页后的典型 SQL 数量：
+
+- 学生端：约 `1 COUNT + 1 SELECT + 5 批量查询 = 7` 条；
+- 负责人 / 管理员：约 `1 COUNT + 1 SELECT + 2 批量查询 = 4` 条。
+
+#### 5. 排序规则
+
+分页查询使用稳定排序：
+
+```text
+create_time DESC, id DESC
+```
+
+避免多条活动 `create_time` 相同导致跨页重复或遗漏。
+
+#### 6. 测试与验证
+
+新增或补充：
+
+- `ActivityControllerTest`：验证 `/page` Controller 入口委托到 `ActivityService.page()`；
+- `ActivityServiceTest`：验证分页参数归一化、空页不执行批量查询、当前页 enrichment；
+- `ActivityListBatchMapperIntegrationIT`：使用真实 MySQL 验证动态状态分页、`total`、`records`、`pageSize=2`、`id DESC` 稳定排序和当前页学生态回填。
+
+单元测试：
+
+```bash
+cd backend
+mvn test
+```
+
+结果：
+
+```text
+Tests run: 159, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+真实 MySQL 集成测试：
+
+```bash
+cd backend
+mvn -Pintegration-test -Dit.mysql.mode=local -Dit.mysql.password=root123 verify
+```
+
+结果：
+
+```text
+Successfully applied 13 migrations
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
