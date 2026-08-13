@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '反馈记录ID',
   `activity_id` BIGINT NOT NULL COMMENT '活动ID',
   `user_id` BIGINT NOT NULL COMMENT '反馈用户ID',
-  `feedback_type` VARCHAR(20) NOT NULL DEFAULT 'evaluation' COMMENT '反馈类型：suggestion活动建议/issue问题反馈/evaluation活动评价',
+  `feedback_type` VARCHAR(20) NOT NULL DEFAULT 'evaluation' COMMENT '反馈类型：suggestion活动建议/issue或problem问题反馈/evaluation活动评价',
   `score` INT DEFAULT NULL COMMENT '满意度评分：1-5分，仅活动评价必填',
   `content` VARCHAR(1000) NOT NULL COMMENT '反馈内容',
   `suggestion` VARCHAR(1000) DEFAULT NULL COMMENT '改进建议',
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   KEY `idx_feedback_user` (`user_id`),
   CONSTRAINT `fk_feedback_activity` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
-  CONSTRAINT `chk_feedback_type` CHECK (`feedback_type` IN ('suggestion', 'issue', 'evaluation')),
+  CONSTRAINT `chk_feedback_type` CHECK (`feedback_type` IN ('suggestion', 'issue', 'problem', 'evaluation')),
   CONSTRAINT `chk_feedback_handle_status` CHECK (`handle_status` IN ('pending', 'viewed', 'resolved')),
   CONSTRAINT `chk_feedback_score` CHECK (`score` IS NULL OR `score` BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='反馈表';

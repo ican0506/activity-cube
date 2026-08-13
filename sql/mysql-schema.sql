@@ -138,17 +138,23 @@ CREATE TABLE `feedback` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '反馈记录ID',
   `activity_id` BIGINT NOT NULL COMMENT '活动ID',
   `user_id` BIGINT NOT NULL COMMENT '反馈用户ID',
-  `rating` INT NOT NULL COMMENT '评分：1-5分',
-  `content` VARCHAR(1000) DEFAULT NULL COMMENT '文字建议',
+  `feedback_type` VARCHAR(20) NOT NULL DEFAULT 'evaluation' COMMENT '反馈类型：suggestion活动建议/issue或problem问题反馈/evaluation活动评价',
+  `score` INT DEFAULT NULL COMMENT '满意度评分：1-5分，仅活动评价必填',
+  `content` VARCHAR(1000) NOT NULL COMMENT '反馈内容',
+  `suggestion` VARCHAR(1000) DEFAULT NULL COMMENT '改进建议',
+  `handle_status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '处理状态：pending未处理/viewed已查看/resolved已处理',
+  `anonymous` TINYINT NOT NULL DEFAULT 0 COMMENT '是否匿名：1匿名，0实名',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_feedback_activity_user` (`activity_id`, `user_id`),
-  KEY `idx_feedback_activity` (`activity_id`),
+  KEY `idx_feedback_activity_user` (`activity_id`, `user_id`),
+  KEY `idx_feedback_type` (`feedback_type`),
   KEY `idx_feedback_user` (`user_id`),
   CONSTRAINT `fk_feedback_activity` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
-  CONSTRAINT `chk_feedback_rating` CHECK (`rating` BETWEEN 1 AND 5)
+  CONSTRAINT `chk_feedback_type` CHECK (`feedback_type` IN ('suggestion', 'issue', 'problem', 'evaluation')),
+  CONSTRAINT `chk_feedback_handle_status` CHECK (`handle_status` IN ('pending', 'viewed', 'resolved')),
+  CONSTRAINT `chk_feedback_score` CHECK (`score` IS NULL OR `score` BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='反馈表';
 
 -- 测试用户
@@ -197,9 +203,9 @@ VALUES
 
 -- 测试反馈
 INSERT INTO `feedback`
-(`id`, `activity_id`, `user_id`, `rating`, `content`)
+(`id`, `activity_id`, `user_id`, `feedback_type`, `score`, `content`, `suggestion`, `handle_status`, `anonymous`)
 VALUES
-(1, 1, 3, 5, '活动组织清晰，签到很方便。'),
-(2, 2, 3, 4, '线上说明比较完整，希望后续增加提醒功能。');
+(1, 1, 3, 'evaluation', 5, '活动组织清晰，签到很方便。', '希望后续增加更多现场引导。', 'pending', 0),
+(2, 2, 3, 'evaluation', 4, '线上说明比较完整，希望后续增加提醒功能。', '可以提前推送签到提醒。', 'pending', 0);
 
 SET FOREIGN_KEY_CHECKS = 1;
