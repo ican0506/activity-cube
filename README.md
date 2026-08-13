@@ -292,3 +292,288 @@ git ls-files node_modules dist target uploads .env .env.local
 ```
 
 提交前不要包含 `node_modules/`、`dist/`、`target/`、`uploads/`、`.env`、`.env.local`、日志文件、真实数据库密码、本机局域网 IP、Token 或密钥。
+
+## 近期工程化改动记录
+
+> 说明：从 2026-08-13 起，后续每次完成代码修改、数据库变更、测试补充或重要工程化调整，都需要同步更新本节，避免 README 与实际项目状态脱节。
+
+### 2026-08-12：认证、权限、并发与性能优化
+
+本轮重点不是新增业务功能，而是把项目从「能跑的课程设计」继续往「可交付、可维护、可解释的工程项目」推进。
+
+#### 1. JWT 认证改造
+
+- 将原来的 `mock-token-{userId}` 替换为真实 JWT。
+- JWT 包含用户 ID、角色、签发时间、过期时间和签发方等 Claims。
+- 登录、注册返回结构保持不变，前端仍然按原方式保存 token。
+- 后端认证流程改为：
+  1. 读取 `Authorization: Bearer <token>`；
+  2. 校验 JWT 签名、过期时间和签发方；
+  3. 根据 token 中的 userId 查询数据库用户；
+  4. 以数据库中的用户角色和状态作为最终权限依据；
+  5. 写入 `UserContext`，请求结束后清理上下文。
+- 新增 JWT 配置项：
+
+```yaml
+security:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:7200}
+    issuer: ${JWT_ISSUER:activity-cube}
+```
+
+本地运行时需要配置：
+
+```env
+JWT_SECRET=至少 32 字节的随机字符串
+JWT_EXPIRATION_SECONDS=7200
+JWT_ISSUER=activity-cube
+```
+
+注意：`JWT_SECRET` 不允许提交真实值到 Git。
+
+#### 2. Spring Security 接入
+
+- 引入 Spring Security 正式接管请求认证入口。
+- 保留项目现有 `UserContext`，确保报名、签到、反馈、AI 等业务代码不需要大范围重构。
+- 对登录、注册、静态上传资源和必要预检请求做放行。
+- 普通业务接口继续通过统一认证链路获取当前用户。
+
+#### 3. 方法级 RBAC 权限体系
+
+- 在关键 Service / Controller 上补充角色权限控制。
+- 明确三类角色边界：
+  - `student`：浏览活动、报名、签到、反馈、查看个人数据；
+  - `organizer`：管理自己创建的活动，查看名单、二维码、统计和反馈；
+  - `admin`：管理全部活动、用户、审核、日志和系统通知。
+- 管理员接口、负责人接口、学生个人接口不再只依赖前端隐藏入口，后端也做权限校验。
+
+#### 4. 活动报名并发控制
+
+- 在 `activity` 表增加 `registered_count` 业务计数器。
+- 使用 MySQL 原子更新抢占名额：
+
+```sql
+UPDATE activity
+SET registered_count = registered_count + 1
+WHERE id = ?
+  AND (max_participants IS NULL OR registered_count < max_participants)
+```
+
+- 报名事务边界调整为：
+  1. 校验活动状态；
+  2. 原子占用名额；
+  3. 插入报名记录；
+  4. 生成报名成功通知；
+  5. 提交事务。
+- 如果报名记录插入或通知生成失败，`registered_count` 会随事务回滚。
+- 同一活动同一用户重复报名仍由应用层提前判断 + 数据库唯一约束兜底。
+- 取消报名时同步减少 `registered_count`，并避免重复取消导致计数变负。
+- 新增 Flyway 迁移：
+
+```text
+backend/src/main/resources/db/migration/V11__registration_concurrency.sql
+```
+
+#### 5. 数据库 Schema 一致性检查
+
+- 检查 Flyway V1-V12 最终生成的核心表结构。
+- 对比维护中的完整初始化 SQL 与实体字段。
+- 补齐 `activity.checkin_mode` 迁移：
+
+```text
+backend/src/main/resources/db/migration/V12__activity_checkin_mode.sql
+```
+
+- 确认以下字段在当前工程中保持一致：
+  - `activity_mode`
+  - `checkin_mode`
+  - `registered_count`
+  - `activity_category`
+  - 奖励相关字段
+  - 报名、签到、活动时间字段
+  - 活动状态字段
+
+#### 6. 活动列表 N+1 查询优化
+
+- 优化 `ActivityService.list()`，解决活动列表中按活动逐条查询报名、签到、反馈状态的问题。
+- 原逻辑在学生端近似为：
+
+```text
+1 次活动列表查询 + 每个活动 5 次状态查询
+```
+
+- 新逻辑改为：
+  1. 查询活动基础列表；
+  2. 计算动态活动状态；
+  3. 按状态完成过滤；
+  4. 对最终活动 ID 列表批量查询报名数、签到数、学生报名状态、签到状态和反馈状态；
+  5. 回填页面展示字段。
+- 新增批量 Mapper 方法：
+  - `RegistrationMapper.countByActivityIds`
+  - `RegistrationMapper.findActivityIdsByUserAndActivityIds`
+  - `CheckinMapper.countByActivityIds`
+  - `CheckinMapper.findActivityIdsByUserAndActivityIds`
+  - `FeedbackMapper.findActivityIdsByUserAndActivityIds`
+- 新增通用计数 VO：
+
+```text
+backend/src/main/java/com/activitycube/vo/ActivityCountVO.java
+```
+
+- 优化后：
+  - 学生端活动列表最多约 6 次 SQL；
+  - 负责人 / 管理员活动列表最多约 3 次 SQL；
+  - 空列表直接返回，不再执行批量 Mapper；
+  - 循环内不再访问数据库，只从 `Map` / `Set` 中读取结果。
+
+#### 7. 测试补充与验证结果
+
+新增或完善的测试包括：
+
+- JWT token 生成、解析、过期、篡改、issuer 校验；
+- Spring Security 认证入口；
+- 方法级 RBAC 权限；
+- 报名并发控制单元测试；
+- 真实 MySQL 报名并发集成测试；
+- 活动列表批量查询单元测试；
+- 活动列表批量 Mapper MySQL 集成测试。
+
+已验证命令：
+
+```bash
+cd backend
+mvn test
+```
+
+结果：
+
+```text
+Tests run: 156, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+真实 MySQL 集成测试命令：
+
+```bash
+cd backend
+mvn -Pintegration-test -Dit.mysql.mode=local -Dit.mysql.password=root123 verify
+```
+
+结果：
+
+```text
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+说明：集成测试会创建独立测试库，例如 `activity_cube_concurrency_it` 和 `activity_cube_batch_mapper_it`，不会直接修改正式 `activity_cube` 数据库。
+
+#### 8. 已知遗留问题
+
+- 单元测试编译阶段仍可能提示既有测试中的 unchecked warning，目前不影响测试通过。
+
+### 2026-08-13：反馈表 Schema Drift 修复
+
+本轮只处理数据库结构一致性问题，不修改 N+1 优化代码、反馈业务逻辑、前端页面、报名并发算法、认证权限、AI 模块或分页逻辑。
+
+#### 1. 修复原因
+
+真实 MySQL 集成测试暴露出一个历史遗留问题：
+
+- 通过 Flyway `V1` 到 `V12` 从零创建数据库时，`feedback` 表缺少 `feedback_type` 字段；
+- 当前 `Feedback` 实体、`FeedbackService` 和维护中的完整初始化 SQL 已经按多类型反馈设计；
+- 这导致 Flyway 最终 schema 与当前应用代码 / 完整初始化 SQL 不一致。
+
+#### 2. 正式字段定义
+
+`feedback.feedback_type` 当前正式定义为：
+
+```sql
+feedback_type VARCHAR(20) NOT NULL DEFAULT 'evaluation'
+```
+
+含义：
+
+- `suggestion`：活动建议；
+- `issue` / `problem`：问题反馈；
+- `evaluation`：活动评价。
+
+当前业务代码会把前端传入的 `issue` 兼容映射为 `problem`，同时 SQL 约束保留 `issue`，用于兼容历史数据和旧接口输入。
+
+#### 3. 新增 Flyway 迁移
+
+新增迁移文件：
+
+```text
+backend/src/main/resources/db/migration/V13__feedback_type.sql
+```
+
+该迁移完成：
+
+- 补充 `feedback_type` 字段；
+- 补充 `handle_status` 字段；
+- 将 `score` 调整为可为空，仅活动评价需要评分；
+- 将历史空 `content` 回填为空字符串，保证后续 `NOT NULL` 修改安全；
+- 移除旧的 `uk_feedback_activity_user` 唯一约束，避免同一用户只能提交一种反馈；
+- 增加 `idx_feedback_activity_user`、`idx_feedback_type`、`idx_feedback_user`；
+- 增加反馈类型、处理状态、评分范围的检查约束。
+
+历史数据兼容策略：
+
+- 旧反馈记录默认回填为 `evaluation`；
+- 旧处理状态默认回填为 `pending`；
+- 旧空内容回填为空字符串；
+- 迁移使用存在性判断，兼容已经手动执行过旧补丁 SQL 的本地数据库。
+
+#### 4. 完整 SQL 同步
+
+已同步维护中的完整初始化 SQL：
+
+- `sql/activity_cube_final.sql`
+- `sql/mysql-schema.sql`
+
+其中 `feedback` 表字段、索引和约束已经与 `Feedback` 实体及当前业务逻辑保持一致。
+
+#### 5. 集成测试修正
+
+之前为了绕过缺失的 `feedback_type`，`ActivityListBatchMapperIntegrationIT` 使用 `JdbcTemplate` 手写插入反馈数据。
+
+现在 Flyway schema 已经修复，测试恢复为真实路径：
+
+- 使用 `FeedbackMapper.insert()`；
+- 通过 `Feedback` 实体写入 `feedbackType`、`score`、`content`、`suggestion`、`handleStatus`、`anonymous` 等字段；
+- `RegistrationConcurrencyIntegrationIT` 的 Flyway 版本校验更新到 `13`。
+
+#### 6. 验证结果
+
+单元测试：
+
+```bash
+cd backend
+mvn test
+```
+
+结果：
+
+```text
+Tests run: 156, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+真实 MySQL 集成测试：
+
+```bash
+cd backend
+mvn -Pintegration-test -Dit.mysql.mode=local -Dit.mysql.password=root123 verify
+```
+
+结果：
+
+```text
+Successfully applied 13 migrations
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+说明：集成测试会创建独立测试库，例如 `activity_cube_concurrency_it` 和 `activity_cube_batch_mapper_it`，不会直接修改正式 `activity_cube` 数据库。

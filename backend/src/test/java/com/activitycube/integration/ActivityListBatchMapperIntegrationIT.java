@@ -2,6 +2,7 @@ package com.activitycube.integration;
 
 import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
+import com.activitycube.entity.Feedback;
 import com.activitycube.entity.Registration;
 import com.activitycube.entity.User;
 import com.activitycube.mapper.ActivityMapper;
@@ -13,7 +14,6 @@ import com.activitycube.vo.ActivityCountVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
@@ -56,8 +56,6 @@ class ActivityListBatchMapperIntegrationIT {
     private CheckinMapper checkinMapper;
     @Autowired
     private FeedbackMapper feedbackMapper;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void batchCountAndStudentActivityIdQueriesReturnExpectedMappings() {
@@ -85,7 +83,7 @@ class ActivityListBatchMapperIntegrationIT {
 
         checkinMapper.insert(checkin(activityA.getId(), studentA.getId(), registrationA1.getId()));
         checkinMapper.insert(checkin(activityC.getId(), studentA.getId(), registrationC1.getId()));
-        insertFeedback(activityC.getId(), studentA.getId());
+        feedbackMapper.insert(feedback(activityC.getId(), studentA.getId()));
 
         Map<Long, Long> registrationCounts = countMap(registrationMapper.countByActivityIds(activityIds));
         Map<Long, Long> checkinCounts = countMap(checkinMapper.countByActivityIds(activityIds));
@@ -171,11 +169,18 @@ class ActivityListBatchMapperIntegrationIT {
         return checkin;
     }
 
-    private void insertFeedback(Long activityId, Long userId) {
-        jdbcTemplate.update("""
-                INSERT INTO feedback (activity_id, user_id, score, content, anonymous)
-                VALUES (?, ?, ?, ?, ?)
-                """, activityId, userId, 5, "活动体验不错", 0);
+    private Feedback feedback(Long activityId, Long userId) {
+        Feedback feedback = new Feedback();
+        feedback.setActivityId(activityId);
+        feedback.setUserId(userId);
+        feedback.setFeedbackType("evaluation");
+        feedback.setScore(5);
+        feedback.setContent("活动体验不错");
+        feedback.setSuggestion("继续保持");
+        feedback.setHandleStatus("pending");
+        feedback.setAnonymous(false);
+        feedback.setCreatedAt(LocalDateTime.now());
+        return feedback;
     }
 
     private static MysqlSettings mysqlSettings() {
