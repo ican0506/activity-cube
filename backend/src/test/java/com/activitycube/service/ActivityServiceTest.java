@@ -2,6 +2,7 @@ package com.activitycube.service;
 
 import com.activitycube.entity.Activity;
 import com.activitycube.entity.User;
+import com.activitycube.dto.ActivityQueryRequest;
 import com.activitycube.mapper.ActivityMapper;
 import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.FeedbackMapper;
@@ -9,7 +10,9 @@ import com.activitycube.mapper.RegistrationMapper;
 import com.activitycube.util.ActivityStatusUtil;
 import com.activitycube.util.UserContext;
 import com.activitycube.vo.ActivityCountVO;
+import com.activitycube.vo.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -157,6 +160,57 @@ class ActivityServiceTest {
 
         assertThat(activity.getCanRegister()).isFalse();
         assertThat(activity.getStudentActivityStatusText()).isEqualTo("名额已满");
+    }
+
+    @Test
+    void pageNormalizesInvalidPageParamsAndEnrichesCurrentPageOnly() {
+        UserContext.set(student());
+        ActivityQueryRequest request = new ActivityQueryRequest();
+        request.setPageNum(0);
+        request.setPageSize(99);
+        request.setStatus(ActivityStatusUtil.REGISTERING);
+        Activity first = publishedActivity(1L, -1, 1, 2, 4, 10);
+        Page<Activity> mapperPage = new Page<>(1, 50);
+        mapperPage.setRecords(List.of(first));
+        mapperPage.setTotal(61);
+        when(activityMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class))).thenReturn(mapperPage);
+        when(registrationMapper.countByActivityIds(List.of(1L))).thenReturn(List.of(count(1L, 2L)));
+        when(checkinMapper.countByActivityIds(List.of(1L))).thenReturn(List.of());
+        when(registrationMapper.findActivityIdsByUserAndActivityIds(7L, List.of(1L))).thenReturn(List.of(1L));
+        when(checkinMapper.findActivityIdsByUserAndActivityIds(7L, List.of(1L))).thenReturn(List.of());
+        when(feedbackMapper.findActivityIdsByUserAndActivityIds(7L, List.of(1L))).thenReturn(List.of());
+
+        PageResult<Activity> result = activityService.page(request);
+
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(50);
+        assertThat(result.getTotal()).isEqualTo(61);
+        assertThat(result.getRecords()).hasSize(1);
+        assertThat(result.getRecords().get(0).getRegistrationCount()).isEqualTo(2L);
+        assertThat(result.getRecords().get(0).getRegistered()).isTrue();
+        verify(registrationMapper).countByActivityIds(List.of(1L));
+        verify(checkinMapper).countByActivityIds(List.of(1L));
+        verify(registrationMapper).findActivityIdsByUserAndActivityIds(7L, List.of(1L));
+    }
+
+    @Test
+    void pageReturnsEmptyWithoutCallingBatchMappersWhenCurrentPageEmpty() {
+        UserContext.set(student());
+        Page<Activity> mapperPage = new Page<>(2, 10);
+        mapperPage.setRecords(List.of());
+        mapperPage.setTotal(0);
+        when(activityMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class))).thenReturn(mapperPage);
+
+        PageResult<Activity> result = activityService.page(new ActivityQueryRequest());
+
+        assertThat(result.getRecords()).isEmpty();
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(10);
+        verify(registrationMapper, never()).countByActivityIds(any());
+        verify(checkinMapper, never()).countByActivityIds(any());
+        verify(registrationMapper, never()).findActivityIdsByUserAndActivityIds(any(), any());
+        verify(checkinMapper, never()).findActivityIdsByUserAndActivityIds(any(), any());
+        verify(feedbackMapper, never()).findActivityIdsByUserAndActivityIds(any(), any());
     }
 
     private void assertActivity(Activity activity, Long registrations, Long checkins, boolean registered,

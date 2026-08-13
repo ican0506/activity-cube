@@ -1,5 +1,6 @@
 package com.activitycube.integration;
 
+import com.activitycube.dto.ActivityQueryRequest;
 import com.activitycube.entity.Activity;
 import com.activitycube.entity.Checkin;
 import com.activitycube.entity.Feedback;
@@ -10,7 +11,12 @@ import com.activitycube.mapper.CheckinMapper;
 import com.activitycube.mapper.FeedbackMapper;
 import com.activitycube.mapper.RegistrationMapper;
 import com.activitycube.mapper.UserMapper;
+import com.activitycube.service.ActivityService;
+import com.activitycube.util.ActivityStatusUtil;
+import com.activitycube.util.UserContext;
 import com.activitycube.vo.ActivityCountVO;
+import com.activitycube.vo.PageResult;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -56,6 +62,13 @@ class ActivityListBatchMapperIntegrationIT {
     private CheckinMapper checkinMapper;
     @Autowired
     private FeedbackMapper feedbackMapper;
+    @Autowired
+    private ActivityService activityService;
+
+    @AfterEach
+    void clearUserContext() {
+        UserContext.clear();
+    }
 
     @Test
     void batchCountAndStudentActivityIdQueriesReturnExpectedMappings() {
@@ -102,6 +115,67 @@ class ActivityListBatchMapperIntegrationIT {
                 .containsExactly(activityC.getId());
     }
 
+    @Test
+    void pagedActivityListFiltersDynamicStatusBeforePaginationAndEnrichesCurrentPage() {
+        User organizer = user("organizer", null);
+        userMapper.insert(organizer);
+        User studentA = user("student", "2026002001");
+        userMapper.insert(studentA);
+        User studentB = user("student", "2026002002");
+        userMapper.insert(studentB);
+        LocalDateTime sameCreateTime = LocalDateTime.of(2026, 8, 13, 9, 0);
+        String keyword = "分页状态活动-" + UUID.randomUUID();
+
+        Activity registeringA = activityWithTimes(organizer.getId(), sameCreateTime, -2, 2, 3, 5);
+        registeringA.setTitle(keyword + "-报名A");
+        activityMapper.insert(registeringA);
+        Activity registeringB = activityWithTimes(organizer.getId(), sameCreateTime, -3, 3, 4, 6);
+        registeringB.setTitle(keyword + "-报名B");
+        activityMapper.insert(registeringB);
+        Activity registeringC = activityWithTimes(organizer.getId(), sameCreateTime, -4, 4, 5, 7);
+        registeringC.setTitle(keyword + "-报名C");
+        activityMapper.insert(registeringC);
+        Activity waitingStart = activityWithTimes(organizer.getId(), sameCreateTime, -5, -4, 2, 4);
+        waitingStart.setTitle(keyword + "-待开始");
+        activityMapper.insert(waitingStart);
+        Activity ongoing = activityWithTimes(organizer.getId(), sameCreateTime, -5, -4, -1, 2);
+        ongoing.setTitle(keyword + "-进行中");
+        activityMapper.insert(ongoing);
+        Activity ended = activityWithTimes(organizer.getId(), sameCreateTime, -6, -5, -4, -2);
+        ended.setTitle(keyword + "-已结束");
+        activityMapper.insert(ended);
+
+        Registration registration = registration(registeringC.getId(), studentA, "张三");
+        registrationMapper.insert(registration);
+        registrationMapper.insert(registration(registeringC.getId(), studentB, "李四"));
+        checkinMapper.insert(checkin(registeringC.getId(), studentA.getId(), registration.getId()));
+        feedbackMapper.insert(feedback(registeringC.getId(), studentA.getId()));
+        UserContext.set(studentA);
+
+        PageResult<Activity> firstPage = activityService.page(query(keyword, ActivityStatusUtil.REGISTERING, 1, 2));
+        PageResult<Activity> secondPage = activityService.page(query(keyword, ActivityStatusUtil.REGISTERING, 2, 2));
+
+        assertThat(firstPage.getTotal()).isEqualTo(3);
+        assertThat(firstPage.getRecords()).extracting(Activity::getId)
+                .containsExactly(registeringC.getId(), registeringB.getId());
+        assertThat(secondPage.getTotal()).isEqualTo(3);
+        assertThat(secondPage.getRecords()).extracting(Activity::getId)
+                .containsExactly(registeringA.getId());
+        Activity enriched = firstPage.getRecords().get(0);
+        assertThat(enriched.getRegistrationCount()).isEqualTo(2L);
+        assertThat(enriched.getCheckinCount()).isEqualTo(1L);
+        assertThat(enriched.getRegistered()).isTrue();
+        assertThat(enriched.getCheckedIn()).isTrue();
+        assertThat(enriched.getFeedbackSubmitted()).isTrue();
+
+        assertThat(activityService.page(query(keyword, ActivityStatusUtil.WAITING_START, 1, 10)).getRecords())
+                .extracting(Activity::getId).contains(waitingStart.getId());
+        assertThat(activityService.page(query(keyword, ActivityStatusUtil.ONGOING, 1, 10)).getRecords())
+                .extracting(Activity::getId).contains(ongoing.getId());
+        assertThat(activityService.page(query(keyword, ActivityStatusUtil.ENDED, 1, 10)).getRecords())
+                .extracting(Activity::getId).contains(ended.getId());
+    }
+
     private Map<Long, Long> countMap(List<ActivityCountVO> rows) {
         return rows.stream().collect(Collectors.toMap(ActivityCountVO::getActivityId, ActivityCountVO::getCount));
     }
@@ -130,6 +204,31 @@ class ActivityListBatchMapperIntegrationIT {
         activity.setStatus("PUBLISHED");
         activity.setCreatorId(creatorId);
         return activity;
+    }
+
+    private Activity activityWithTimes(Long creatorId, LocalDateTime createdAt,
+                                       int registerStartOffsetHours, int registerEndOffsetHours,
+                                       int startOffsetHours, int endOffsetHours) {
+        Activity activity = activity(creatorId);
+        LocalDateTime now = LocalDateTime.now();
+        activity.setRegisterStartTime(now.plusHours(registerStartOffsetHours));
+        activity.setRegisterEndTime(now.plusHours(registerEndOffsetHours));
+        activity.setStartTime(now.plusHours(startOffsetHours));
+        activity.setEndTime(now.plusHours(endOffsetHours));
+        activity.setCheckinStartTime(now.plusHours(startOffsetHours));
+        activity.setCheckinEndTime(now.plusHours(endOffsetHours));
+        activity.setCreatedAt(createdAt);
+        activity.setUpdatedAt(createdAt);
+        return activity;
+    }
+
+    private ActivityQueryRequest query(String keyword, String status, int pageNum, int pageSize) {
+        ActivityQueryRequest request = new ActivityQueryRequest();
+        request.setKeyword(keyword);
+        request.setStatus(status);
+        request.setPageNum(pageNum);
+        request.setPageSize(pageSize);
+        return request;
     }
 
     private User user(String role, String studentNo) {
