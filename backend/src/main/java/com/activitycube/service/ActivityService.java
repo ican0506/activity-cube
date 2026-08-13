@@ -76,6 +76,9 @@ public class ActivityService {
         LocalDateTime now = LocalDateTime.now();
         User currentUser = UserContext.get().orElse(null);
         LambdaQueryWrapper<Activity> wrapper = baseListWrapper(query.getKeyword(), query.getCampus(), currentUser);
+        if (StringUtils.hasText(query.getActivityMode())) {
+            wrapper.eq(Activity::getActivityMode, query.getActivityMode());
+        }
         applyStatusCondition(wrapper, query.getStatus(), now);
         wrapper.orderByDesc(Activity::getCreatedAt).orderByDesc(Activity::getId);
 

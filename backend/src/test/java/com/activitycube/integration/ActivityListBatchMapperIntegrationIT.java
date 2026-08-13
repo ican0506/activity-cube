@@ -176,6 +176,45 @@ class ActivityListBatchMapperIntegrationIT {
                 .extracting(Activity::getId).contains(ended.getId());
     }
 
+    @Test
+    void pageFiltersByActivityModeBeforePagination() {
+        User organizer = user("organizer", null);
+        userMapper.insert(organizer);
+        User student = user("student", "2026001999");
+        userMapper.insert(student);
+        String keyword = "mode-page-" + UUID.randomUUID();
+
+        Activity onlineA = activity(organizer.getId());
+        onlineA.setTitle(keyword + "-线上A");
+        onlineA.setActivityMode("online");
+        onlineA.setCampus("线上");
+        activityMapper.insert(onlineA);
+
+        Activity onlineB = activity(organizer.getId());
+        onlineB.setTitle(keyword + "-线上B");
+        onlineB.setActivityMode("online");
+        onlineB.setCampus("线上");
+        activityMapper.insert(onlineB);
+
+        Activity offline = activity(organizer.getId());
+        offline.setTitle(keyword + "-线下");
+        offline.setActivityMode("offline");
+        offline.setCheckinMode("qr");
+        offline.setCampus("龙子湖校区");
+        offline.setLocation("龙子湖校区活动室");
+        activityMapper.insert(offline);
+
+        UserContext.set(student);
+        ActivityQueryRequest request = query(keyword, "ALL", 1, 10);
+        request.setActivityMode("online");
+
+        PageResult<Activity> result = activityService.page(request);
+
+        assertThat(result.getTotal()).isEqualTo(2);
+        assertThat(result.getRecords()).extracting(Activity::getId)
+                .containsExactly(onlineB.getId(), onlineA.getId());
+    }
+
     private Map<Long, Long> countMap(List<ActivityCountVO> rows) {
         return rows.stream().collect(Collectors.toMap(ActivityCountVO::getActivityId, ActivityCountVO::getCount));
     }
