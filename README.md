@@ -728,3 +728,134 @@ Successfully applied 13 migrations
 Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+
+### 2026-08-13：活动分页查询索引实测与 V14 迁移
+
+本轮只处理 `activity` 列表分页查询的 MySQL 索引优化，不修改 Java 业务代码、前端页面、报名并发逻辑、认证权限或 AI 模块。
+
+#### 1. 测试方式
+
+- 在本地 MySQL 中创建临时性能测试表 `activity_perf`；
+- 复制当前 `activity` 表结构；
+- 构造约 `30000` 条活动数据，其中 `PUBLISHED` 约 `24000` 条；
+- 使用 `EXPLAIN ANALYZE` 对比优化前后执行计划；
+- 测试完成后删除 `activity_perf`，不污染正式业务数据。
+
+#### 2. 优化前主要瓶颈
+
+典型活动大厅查询：
+
+```sql
+SELECT id, title, status, campus, activity_mode, create_time
+FROM activity_perf
+WHERE status = 'PUBLISHED'
+ORDER BY create_time DESC, id DESC
+LIMIT 10;
+```
+
+优化前执行计划：
+
+- `key = NULL`
+- `type = ALL`
+- `Extra = Using where; Using filesort`
+- 实际扫描 `30000` 行，过滤出 `24000` 行；
+- records 查询耗时约 `20.1ms`。
+
+校区筛选场景虽然可以使用旧索引 `idx_activity_campus_status(campus,status)`，但仍需要 filesort：
+
+- `campus + PUBLISHED` records 查询约 `45.2ms`；
+- `campus + REGISTERING` records 查询约 `39.3ms`。
+
+#### 3. 候选索引实测结果
+
+候选索引一：
+
+```sql
+CREATE INDEX idx_activity_status_create
+ON activity (status, create_time, id);
+```
+
+实测效果：
+
+- 默认活动大厅 records 查询从约 `20.1ms` 降到约 `0.13ms`；
+- 执行计划从 `ALL + filesort` 变为 `idx_activity_status_create + Backward index scan`；
+- `activity_mode = online` records 查询从约 `72.4ms` 降到约 `0.16ms`；
+- `REGISTERING / ONGOING / ENDED` records 查询从约 `75ms-89ms` 降到约 `0.26ms-0.44ms`。
+
+候选索引二：
+
+```sql
+CREATE INDEX idx_activity_campus_status_create
+ON activity (campus, status, create_time, id);
+```
+
+实测效果：
+
+- `campus + PUBLISHED` records 查询从约 `45.2ms` 降到约 `0.12ms`；
+- `campus + REGISTERING` records 查询从约 `39.3ms` 降到约 `0.28ms`；
+- 该索引覆盖旧索引 `idx_activity_campus_status(campus,status)` 的左前缀能力，因此正式迁移中删除旧索引，避免长期维护重复索引。
+
+#### 4. 本轮正式索引
+
+新增 Flyway：
+
+```text
+backend/src/main/resources/db/migration/V14__activity_query_indexes.sql
+```
+
+正式索引调整：
+
+```sql
+DROP INDEX idx_activity_campus_status ON activity;
+
+CREATE INDEX idx_activity_status_create
+ON activity (`status`, `create_time`, `id`);
+
+CREATE INDEX idx_activity_campus_status_create
+ON activity (`campus`, `status`, `create_time`, `id`);
+```
+
+同步更新：
+
+- `sql/activity_cube_final.sql`
+- `sql/mysql-schema.sql`
+
+干净初始化 SQL 中不再同时保留旧 `idx_activity_campus_status` 和新 `idx_activity_campus_status_create`。
+
+#### 5. 已知边界
+
+- 动态状态的 COUNT 查询仍然可能较重，因为 `REGISTERING / ONGOING / ENDED` 还需要结合时间字段过滤；
+- `title LIKE '%keyword%'` 的包含搜索没有本质优化，普通 BTree 无法解决前导通配符搜索；
+- 本轮不新增 `activity_mode` 独立索引，因为 records 查询已能通过 `status + create_time + id` 快速找到前 10 条。
+
+#### 6. 验证结果
+
+单元测试：
+
+```bash
+cd backend
+mvn test
+```
+
+结果：
+
+```text
+Tests run: 159, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+真实 MySQL 集成测试：
+
+```bash
+cd backend
+mvn -Pintegration-test -Dit.mysql.mode=local -Dit.mysql.password=root123 verify
+```
+
+结果：
+
+```text
+Successfully validated 14 migrations
+Successfully applied 14 migrations
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
