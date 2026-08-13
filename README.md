@@ -859,3 +859,20 @@ Successfully applied 14 migrations
 Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+
+### 2026-08-13：Activity 表 Schema 一致性收尾
+
+本轮只处理 `activity` 表结构一致性，不修改 Java 业务代码、前端页面、分页、报名并发、认证权限或 AI 模块。
+
+- 从 `sql/activity_cube_final.sql` 和 `sql/mysql-schema.sql` 删除过时的 `idx_activity_start_time(start_time)` 定义；
+- 保留已验证有真实查询路径的 `idx_activity_checkin_code(checkin_code)`；
+- 新增 Flyway `V15__activity_constraints.sql`，补齐 Activity 表 CHECK constraints；
+- 约束覆盖：
+  - `activity_mode IN ('online', 'offline', 'hybrid')`
+  - `checkin_mode IN ('online', 'qr', 'both')`
+  - `campus IN ('全校区', '龙子湖校区', '文化路校区', '许昌校区', '线上')`
+  - `status IN ('DRAFT', 'PENDING_REVIEW', 'REJECTED', 'PUBLISHED', 'CANCELLED')`
+  - `max_participants IS NULL OR max_participants > 0`
+  - 活动时间、报名时间、签到时间均要求结束时间大于开始时间
+
+执行 V15 前已检查本地 `activity_cube.activity` 现有 22 条活动数据，没有发现违反上述 CHECK 的记录。
