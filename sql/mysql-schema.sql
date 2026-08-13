@@ -75,7 +75,6 @@ CREATE TABLE `activity` (
   KEY `idx_activity_creator` (`creator_id`),
   KEY `idx_activity_status_create` (`status`, `create_time`, `id`),
   KEY `idx_activity_campus_status_create` (`campus`, `status`, `create_time`, `id`),
-  KEY `idx_activity_start_time` (`start_time`),
   KEY `idx_activity_checkin_code` (`checkin_code`),
   CONSTRAINT `fk_activity_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`),
   CONSTRAINT `chk_activity_mode` CHECK (`activity_mode` IN ('online', 'offline', 'hybrid')),

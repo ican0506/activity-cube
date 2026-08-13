@@ -72,8 +72,8 @@ class RegistrationConcurrencyIntegrationIT {
     private DataSource dataSource;
 
     @Test
-    void flywayMigratesMysqlThroughV14() throws SQLException {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
+    void flywayMigratesMysqlThroughV15() throws SQLException {
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("15");
         try (Connection connection = dataSource.getConnection()) {
             assertThat(connection.getMetaData().getDatabaseProductName()).contains("MySQL");
             assertThat(connection.getMetaData().getDatabaseProductVersion()).isNotBlank();
