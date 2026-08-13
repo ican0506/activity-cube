@@ -14,6 +14,7 @@ import com.activitycube.mapper.RegistrationMapper;
 import com.activitycube.util.ActivityStatusUtil;
 import com.activitycube.util.AuthUtil;
 import com.activitycube.util.UserContext;
+import com.activitycube.vo.ActivityCountVO;
 import com.activitycube.vo.ActivityDetail;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,11 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,12 +62,18 @@ public class ActivityService {
             wrapper.eq(Activity::getCampus, campus);
         }
         User currentUser = UserContext.get().orElse(null);
-        return activityMapper.selectList(wrapper).stream()
-                .peek(activity -> applyStudentResponse(activity, currentUser))
+        List<Activity> activities = activityMapper.selectList(wrapper).stream()
+                .peek(this::applyResponseDefaults)
                 .filter(activity -> !StringUtils.hasText(status)
                         || "全部".equals(status)
                         || status.equals(activity.getStatus()))
                 .toList();
+        if (activities.isEmpty()) {
+            return List.of();
+        }
+        ActivityListContext context = prepareActivityListContext(activities, currentUser);
+        activities.forEach(activity -> applyStudentResponseFromContext(activity, context));
+        return activities;
     }
 
     public ActivityDetail detail(Long id) {
@@ -386,6 +396,78 @@ public class ActivityService {
         activity.setStudentActivityStatusText(resolveStudentActivityStatusText(activity, full));
     }
 
+    private ActivityListContext prepareActivityListContext(List<Activity> activities, User user) {
+        List<Long> activityIds = activities.stream()
+                .map(Activity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (activityIds.isEmpty()) {
+            return ActivityListContext.empty(user);
+        }
+        Map<Long, Long> registrationCountMap = toCountMap(registrationMapper.countByActivityIds(activityIds));
+        Map<Long, Long> checkinCountMap = toCountMap(checkinMapper.countByActivityIds(activityIds));
+        if (!isStudent(user)) {
+            return new ActivityListContext(registrationCountMap, checkinCountMap, Set.of(), Set.of(), Set.of(), false);
+        }
+        Set<Long> registeredActivityIds = toSet(registrationMapper.findActivityIdsByUserAndActivityIds(user.getId(), activityIds));
+        Set<Long> checkedInActivityIds = toSet(checkinMapper.findActivityIdsByUserAndActivityIds(user.getId(), activityIds));
+        Set<Long> feedbackActivityIds = toSet(feedbackMapper.findActivityIdsByUserAndActivityIds(user.getId(), activityIds));
+        return new ActivityListContext(registrationCountMap, checkinCountMap, registeredActivityIds, checkedInActivityIds, feedbackActivityIds, true);
+    }
+
+    private void applyStudentResponseFromContext(Activity activity, ActivityListContext context) {
+        Long activityId = activity.getId();
+        Long registrationCount = context.registrationCountMap().getOrDefault(activityId, 0L);
+        Long checkinCount = context.checkinCountMap().getOrDefault(activityId, 0L);
+        boolean registered = context.student() && context.registeredActivityIds().contains(activityId);
+        boolean checkedIn = context.student() && context.checkedInActivityIds().contains(activityId);
+        boolean feedbackSubmitted = context.student() && context.feedbackActivityIds().contains(activityId);
+        boolean full = activity.getMaxParticipants() != null
+                && activity.getMaxParticipants() > 0
+                && registrationCount >= activity.getMaxParticipants();
+        boolean canRegister = ActivityStatusUtil.REGISTERING.equals(activity.getStatus()) && !registered && !full;
+        boolean canCheckin = registered && !checkedIn && isWithinCheckinWindow(activity);
+        boolean canOnlineCheckin = canCheckin && supportsOnlineCheckin(activity);
+        boolean canQrCheckin = canCheckin && supportsQrCheckin(activity);
+
+        activity.setRegistrationCount(registrationCount);
+        activity.setCheckinCount(checkinCount);
+        activity.setRegistered(registered);
+        activity.setCheckedIn(checkedIn);
+        activity.setFeedbackSubmitted(feedbackSubmitted);
+        activity.setCanRegister(canRegister);
+        activity.setCanCheckin(canCheckin);
+        activity.setCanOnlineCheckin(canOnlineCheckin);
+        activity.setCanQrCheckin(canQrCheckin);
+        activity.setStudentActivityStatusText(resolveStudentActivityStatusText(activity, full));
+    }
+
+    private Map<Long, Long> toCountMap(List<ActivityCountVO> counts) {
+        if (counts == null || counts.isEmpty()) {
+            return Map.of();
+        }
+        return counts.stream()
+                .filter(count -> count.getActivityId() != null)
+                .collect(Collectors.toMap(
+                        ActivityCountVO::getActivityId,
+                        count -> count.getCount() == null ? 0L : count.getCount(),
+                        Long::sum
+                ));
+    }
+
+    private Set<Long> toSet(List<Long> activityIds) {
+        if (activityIds == null || activityIds.isEmpty()) {
+            return Set.of();
+        }
+        return activityIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private boolean isStudent(User user) {
+        return user != null && user.getId() != null && ("student".equals(user.getRole()) || "user".equals(user.getRole()));
+    }
+
     private boolean isWithinCheckinWindow(Activity activity) {
         if (ActivityStatusUtil.DRAFT.equals(activity.getStatus())
                 || ActivityStatusUtil.PENDING_REVIEW.equals(activity.getStatus())
@@ -481,6 +563,18 @@ public class ActivityService {
 
     private boolean isManager(User user) {
         return user != null && ("organizer".equals(user.getRole()) || "admin".equals(user.getRole()));
+    }
+
+    private record ActivityListContext(Map<Long, Long> registrationCountMap,
+                                       Map<Long, Long> checkinCountMap,
+                                       Set<Long> registeredActivityIds,
+                                       Set<Long> checkedInActivityIds,
+                                       Set<Long> feedbackActivityIds,
+                                       boolean student) {
+        static ActivityListContext empty(User user) {
+            boolean student = user != null && user.getId() != null && ("student".equals(user.getRole()) || "user".equals(user.getRole()));
+            return new ActivityListContext(Map.of(), Map.of(), Set.of(), Set.of(), Set.of(), student);
+        }
     }
 
     private String normalizeCheckinMode(String checkinMode, String activityMode) {
